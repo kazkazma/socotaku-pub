@@ -58,6 +58,7 @@ export type PageColumn = {
 }
 
 export type Page = {
+  layoutId: LayoutId
   columns: PageColumn[]
 }
 
