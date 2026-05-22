@@ -62,6 +62,7 @@ async function main() {
 
   for (let pi = 0; pi < pages.length && pi < 3; pi++) {
     const p = pages[pi]
+    if (!p) continue
     for (const col of p.columns) {
       const charCount = col.nodes.reduce(
         (sum: number, n: any) => sum + (n.text?.length || 0),
@@ -74,7 +75,7 @@ async function main() {
     }
   }
 
-  const { html } = buildPageHtml(pages, 'A')
+  const { html } = buildPageHtml(pages)
   const outputPath = join(outputDir, 'output.pdf')
 
   console.log('Rendering PDF...')
