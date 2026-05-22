@@ -1,0 +1,21 @@
+{
+  "name": "socotaku-pub",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "puppeteer": "^25.0.4",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1"
+  }
+}

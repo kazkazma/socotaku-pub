@@ -1,0 +1,44 @@
+@page {
+  size: 182mm 257mm;
+  margin: 0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: 'Noto Serif TC';
+  src: local('Noto Serif TC'), local('NotoSerifCJKtc');
+}
+
+:root {
+  --font-body: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-footnote: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-quote: '標楷體', 'Times New Roman', serif;
+  --color-text: #1a1a1a;
+  --color-footnote: #555;
+  --font-size-body: 11pt;
+  --font-size-footnote: 9pt;
+  --font-size-h2: 14pt;
+  --line-height-body: 19.8pt;
+  --letter-spacing-body: 0.7pt;
+  --page-width: 182mm;
+  --page-height: 257mm;
+}
+
+html, body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: white;
+}
+
+.page {
+  width: var(--page-width);
+  height: var(--page-height);
+  page-break-after: always;
+  overflow: hidden;
+  position: relative;
+}

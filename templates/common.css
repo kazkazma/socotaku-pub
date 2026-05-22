@@ -1,0 +1,16 @@
+.page-number {
+  position: absolute;
+  bottom: 0;
+  font-size: 9pt;
+  writing-mode: horizontal-tb;
+}
+
+.page-number.left {
+  left: var(--margin-outer);
+  text-align: left;
+}
+
+.page-number.right {
+  right: var(--margin-inner);
+  text-align: right;
+}
