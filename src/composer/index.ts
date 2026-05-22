@@ -34,76 +34,75 @@ export class PageComposer {
     const queue: ContentNode[] = [...nodes]
 
     while (queue.length > 0) {
-      const node = queue[0]
+      const node = queue[0]!
+      const nodeType = node.type
 
-      switch (node.type) {
-        case 'page_break':
-          if (!isPageEmpty(currentPage)) pages.push(currentPage)
-          currentPage = createPage(this.layout)
+      if (nodeType === 'page_break') {
+        if (!isPageEmpty(currentPage)) pages.push(currentPage)
+        currentPage = createPage(this.layout)
+        queue.shift()
+        continue
+      }
+
+      if (nodeType === 'layout_switch') {
+        if (!isPageEmpty(currentPage)) pages.push(currentPage)
+        this.layout = LAYOUTS[node.layout!]
+        currentPage = createPage(this.layout)
+        queue.shift()
+        continue
+      }
+
+      if (nodeType === 'footnote_ref') {
+        queue.shift()
+        continue
+      }
+
+      if (nodeType === 'footnote_def') {
+        if (node.text) this.footnoteTexts.push(node.text)
+        queue.shift()
+        continue
+      }
+
+      if (nodeType === 'heading' || nodeType === 'paragraph') {
+        const placed = await this.tryPlace(node, currentPage)
+        if (placed) {
           queue.shift()
-          break
-
-        case 'layout_switch':
-          if (!isPageEmpty(currentPage)) pages.push(currentPage)
-          this.layout = LAYOUTS[node.layout!]
-          currentPage = createPage(this.layout)
-          queue.shift()
-          break
-
-        case 'footnote_ref':
-          queue.shift()
-          break
-
-        case 'footnote_def':
-          if (node.text) this.footnoteTexts.push(node.text)
-          queue.shift()
-          break
-
-        case 'heading':
-        case 'paragraph': {
-          const placed = await this.tryPlace(node, currentPage)
-          if (placed) {
-            queue.shift()
-            break
-          }
-
-          const bodyCols = getBodyColumns(currentPage)
-          const [first, second] = await this.measurer.splitAt(
-            node.text!,
-            BODY_OPTS,
-          )
-
-          if (first) {
-            for (const colIdx of bodyCols) {
-              const existing = getColumnText(currentPage, colIdx)
-              const combined = existing
-                ? existing + '\n' + first
-                : first
-              if (await this.measurer.fits(combined, BODY_OPTS)) {
-                currentPage.columns[colIdx].nodes.push({
-                  ...node,
-                  text: first,
-                })
-                break
-              }
-            }
-          }
-
-          pages.push(currentPage)
-          currentPage = createPage(this.layout)
-
-          if (second) {
-            queue[0] = { ...node, text: second }
-          } else {
-            queue.shift()
-          }
-          break
+          continue
         }
 
-        default:
+        const [first, second] = await this.measurer.splitAt(
+          node.text ?? '',
+          BODY_OPTS,
+        )
+
+        if (first) {
+          const bodyCols = getBodyColumns(currentPage)
+          for (const colIdx of bodyCols) {
+            const col = currentPage.columns[colIdx]
+            if (!col) continue
+            const existing = getColumnText(currentPage, colIdx)
+            if (await this.measurer.fits(
+              existing ? existing + '\n' + first : first,
+              BODY_OPTS,
+            )) {
+              col.nodes.push({ type: nodeType, text: first } as ContentNode)
+              break
+            }
+          }
+        }
+
+        pages.push(currentPage)
+        currentPage = createPage(this.layout)
+
+        if (second) {
+          queue[0] = { type: nodeType, text: second } as ContentNode
+        } else {
           queue.shift()
-          break
+        }
+        continue
       }
+
+      queue.shift()
     }
 
     if (!isPageEmpty(currentPage)) pages.push(currentPage)
@@ -118,6 +117,7 @@ export class PageComposer {
 
     for (const colIdx of bodyCols) {
       const col = page.columns[colIdx]
+      if (!col) continue
       const existing = getColumnText(page, colIdx)
       const combined = existing
         ? existing + '\n' + (node.text || '')
@@ -136,15 +136,19 @@ export class PageComposer {
     if (this.footnoteTexts.length === 0) return
 
     for (let i = pages.length - 1; i >= 0; i--) {
-      const fnColIdx = getFootnoteColumn(pages[i])
+      const page = pages[i]
+      if (!page) continue
+      const fnColIdx = getFootnoteColumn(page)
       if (fnColIdx === null) continue
 
-      const fnCol = pages[i].columns[fnColIdx]
+      const fnCol = page.columns[fnColIdx]
+      if (!fnCol) continue
+
       for (const text of this.footnoteTexts) {
         const existing = fnCol.nodes.map((n) => n.text || '').join('\n')
         const combined = existing ? existing + '\n' + text : text
         if (await this.measurer.fits(combined, FOOTNOTE_OPTS)) {
-          fnCol.nodes.push({ type: 'paragraph', text })
+          fnCol.nodes.push({ type: 'paragraph', text } as ContentNode)
         }
       }
       return

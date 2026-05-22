@@ -1,7 +1,8 @@
-import { type Page, type LayoutDef } from '../types'
+import { type Page, type LayoutDef, type LayoutId } from '../types'
 
 export function createPage(layout: LayoutDef): Page {
   return {
+    layoutId: layout.id,
     columns: layout.columns.map((def) => ({
       def,
       nodes: [],
@@ -26,7 +27,9 @@ export function isPageEmpty(page: Page): boolean {
 }
 
 export function getColumnText(page: Page, colIdx: number): string {
-  return page.columns[colIdx].nodes
+  const col = page.columns[colIdx]
+  if (!col) return ''
+  return col.nodes
     .map((n) => n.text || '')
     .join('\n')
 }
