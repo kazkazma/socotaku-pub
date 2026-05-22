@@ -70,13 +70,15 @@ html, body {
 
 .column p {
   margin: 0;
-  text-indent: 2em;
+  margin-block-end: 19.8pt; /* = 11pt × 1.8 = 一行高 */
+  text-align: justify;
 }
 
 .column h2 {
   font-size: var(--font-size-h2);
   font-weight: 600;
-  margin-bottom: 0.5em;
+  margin-block-end: 19.8pt; /* = 11pt × 1.8 = 一行高 */
+  text-align: justify;
   text-indent: 0;
 }
 
@@ -87,6 +89,8 @@ html, body {
 
 .column .footnote-text {
   font-size: var(--font-size-footnote);
+  margin-block-end: 19.8pt; /* = 11pt × 1.8 = 一行高 */
+  text-align: justify;
   text-indent: 0;
 }
 
