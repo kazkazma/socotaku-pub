@@ -66,12 +66,14 @@ function renderPage(
 }
 
 function renderColumn(col: any): string {
+  const isBody = col.def.type === 'body'
   const content = col.nodes
     .map((node: any) => {
       if (node.type === 'heading') {
         return `<h2>${escapeHtml(node.text || '')}</h2>`
       }
-      return `<p>${escapeHtml(node.text || '')}</p>`
+      const html = replaceFnMarkers(escapeHtml(node.text || ''), isBody)
+      return `<p>${html}</p>`
     })
     .join('\n')
 
@@ -80,6 +82,17 @@ function renderColumn(col: any): string {
   return `<div class="${colClass}">
 ${content}
 </div>`
+}
+
+function replaceFnMarkers(text: string, wrapInSpan: boolean): string {
+  return text.replace(/\[(\w+)\]/g, (match, id) => {
+    const n = parseInt(id, 10)
+    if (isNaN(n)) {
+      return wrapInSpan ? `<span class="footnote-ref">${match}</span>` : match
+    }
+    const svg = `<svg viewBox="0 0 20 20" width="8pt" height="8pt" style="writing-mode:horizontal-tb"><circle cx="10" cy="10" r="9" fill="currentColor"/><text x="10" y="13.5" text-anchor="middle" font-size="11" fill="white">${n}</text></svg>`
+    return wrapInSpan ? `<span class="footnote-ref">${svg}</span>` : svg
+  })
 }
 
 function escapeHtml(str: string): string {

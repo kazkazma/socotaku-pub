@@ -27,11 +27,18 @@ async function main() {
   console.log(`Reading ${filePaths.length} Markdown file(s)...`)
 
   const allNodes: any[] = []
-  for (const fp of filePaths) {
+  for (let fi = 0; fi < filePaths.length; fi++) {
+    const fp = filePaths[fi]
     const md = await Bun.file(join(contentDir, fp)).text()
     const result = parseMarkdown(md)
     if (allNodes.length > 0) {
       allNodes.push({ type: 'page_break' })
+    }
+    for (const node of result.nodes) {
+      if (node.type === 'footnote_ref' || node.type === 'footnote_def') {
+        node.displayId = node.id
+        node.id = `${fi}:${node.id}`
+      }
     }
     allNodes.push(...result.nodes)
   }

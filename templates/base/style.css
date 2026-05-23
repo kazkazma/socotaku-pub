@@ -84,7 +84,7 @@ html, body {
 
 .column .footnote-ref {
   font-size: 0.7em;
-  vertical-align: super;
+  margin-block-end: 0;
 }
 
 .column .footnote-text {

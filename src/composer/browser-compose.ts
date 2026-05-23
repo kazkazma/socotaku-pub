@@ -14,7 +14,8 @@ const PAGE_BOTTOM = PAGE_DIMENSIONS.marginBottomPt
   const composeArea = document.getElementById('compose-area')!
   const pages: any[] = []
   const pageEls: HTMLElement[] = []
-  const footnoteTexts: string[] = []
+  const defMap = new Map<string, string>()
+  const refsPerPage = new Map<number, Array<{ refId: string; displayId: string }>>()
   let currentTemplate = templates[initialLayout]
   let pageData = createPageData(currentTemplate)
   let pageEl = buildPageDOM(currentTemplate, composeArea)
@@ -191,31 +192,49 @@ const PAGE_BOTTOM = PAGE_DIMENSIONS.marginBottomPt
     return { placed: false, remainder: text }
   }
 
-  function placeFootnotes(allPages: any[], texts: string[], pagesEls: HTMLElement[], tpl: any): void {
-    if (texts.length === 0 || !tpl) return
+  function placeFootnotes(allPages: any[], tpl: any): void {
+    if (!tpl) return
 
-    for (let i = allPages.length - 1; i >= 0; i--) {
+    const measurer = document.createElement('div')
+    measurer.style.cssText = `writing-mode:vertical-rl;font-size:9pt;height:167pt;overflow:hidden;position:absolute;left:-9999px;top:0;width:375pt;`
+    document.body.appendChild(measurer)
+
+    const pendingFootnotes: Array<{ displayId: string; text: string }> = []
+
+    for (let i = 0; i < allPages.length; i++) {
       const page = allPages[i]
       const fnCol = page.columns.find((c: any) => c.def.type === 'footnote')
       if (!fnCol) continue
 
-      const pageEl = pagesEls[i]
-      const fnColEl = getColumnEl(pageEl, fnCol.def.id)
-      if (!fnColEl) continue
-
-      for (const text of texts) {
-        const newP = document.createElement('p')
-        newP.textContent = text
-        fnColEl.appendChild(newP)
-
-        if (!columnOverflows(fnColEl)) {
-          fnCol.nodes.push({ type: 'paragraph', text })
-        } else {
-          fnColEl.removeChild(newP)
+      const refs = refsPerPage.get(i) ?? []
+      for (const { refId, displayId } of refs) {
+        const defText = defMap.get(refId)
+        if (defText) {
+          pendingFootnotes.push({ displayId, text: defText })
         }
       }
-      return
+
+      while (pendingFootnotes.length > 0) {
+        const fn = pendingFootnotes[0]
+        const fnText = `[${fn.displayId}] ${fn.text}`
+        const testP = document.createElement('p')
+        testP.textContent = fnText
+        measurer.appendChild(testP)
+
+        if (!columnOverflows(measurer)) {
+          measurer.removeChild(testP)
+          fnCol.nodes.push({ type: 'paragraph', text: fnText })
+          pendingFootnotes.shift()
+        } else {
+          measurer.removeChild(testP)
+          break
+        }
+      }
+
+      measurer.innerHTML = ''
     }
+
+    document.body.removeChild(measurer)
   }
 
   // ── Main Loop ──
@@ -246,11 +265,59 @@ const PAGE_BOTTOM = PAGE_DIMENSIONS.marginBottomPt
     }
 
     if (nodeType === 'footnote_ref') {
+      const markerText = `[${node.displayId || node.id}]`
+      const bodyCols = getBodyColumnDefs(currentTemplate)
+      let placed = false
+
+      for (const col of bodyCols) {
+        const colEl = getColumnEl(pageEl, col.id)
+        if (!colEl) continue
+        const lastP = colEl.lastElementChild as HTMLElement
+        if (lastP && lastP.tagName === 'P') {
+          const orig = lastP.textContent || ''
+          lastP.textContent = orig + markerText
+          if (!columnOverflows(colEl)) {
+            const colIdx = currentTemplate.manifest.columns.indexOf(col)
+            const nodes = pageData.columns[colIdx].nodes
+            if (nodes.length > 0) {
+              const lastNode = nodes[nodes.length - 1]
+              if (lastNode.type === 'paragraph') {
+                lastNode.text = orig + markerText
+              }
+            }
+            placed = true
+            break
+          }
+          lastP.textContent = orig
+        }
+      }
+
+      if (!placed) {
+        if (!isPageEmpty(pageData)) {
+          pages.push(pageData)
+          pageData = createPageData(currentTemplate)
+          pageEl = buildPageDOM(currentTemplate, composeArea)
+          pageEls.push(pageEl)
+        }
+        const firstCol = getBodyColumnDefs(currentTemplate)[0]
+        const colEl = getColumnEl(pageEl, firstCol.id)
+        if (colEl) {
+          const p = document.createElement('p')
+          p.textContent = markerText
+          colEl.appendChild(p)
+          const colIdx = currentTemplate.manifest.columns.indexOf(firstCol)
+          pageData.columns[colIdx].nodes.push({ type: 'paragraph', text: markerText })
+        }
+      }
+
+      const pageIdx = pages.length
+      if (!refsPerPage.has(pageIdx)) refsPerPage.set(pageIdx, [])
+      refsPerPage.get(pageIdx)!.push({ refId: node.id, displayId: node.displayId || node.id })
       continue
     }
 
     if (nodeType === 'footnote_def') {
-      if (node.text) footnoteTexts.push(node.text)
+      if (node.text) defMap.set(node.id, node.text)
       continue
     }
 
@@ -299,7 +366,7 @@ const PAGE_BOTTOM = PAGE_DIMENSIONS.marginBottomPt
   }
 
   if (currentTemplate) {
-    placeFootnotes(pages, footnoteTexts, pageEls, currentTemplate)
+    placeFootnotes(pages, currentTemplate)
   }
 
   return pages
