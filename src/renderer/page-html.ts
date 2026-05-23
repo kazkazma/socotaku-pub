@@ -1,10 +1,11 @@
-import { type Page, PAGE_DIMENSIONS } from '../types'
+import type { Page, PageDimensions } from '../types'
 
 export function buildPageHtml(
   pages: Page[],
+  dimensions: PageDimensions,
   cssContent?: string,
 ): { html: string } {
-  const pageDivs = pages.map((page, i) => renderPage(page, i + 1))
+  const pageDivs = pages.map((page, i) => renderPage(page, i + 1, dimensions))
 
   let html = `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -29,24 +30,25 @@ ${pageDivs.join('\n')}
 function renderPage(
   page: Page,
   pageNum: number,
+  dim: PageDimensions,
 ): string {
   const layoutId = page.layoutId
-  const isLeft = pageNum % 2 === 0
+  const isLeft = pageNum % 2 === 1
   const marginLeft = isLeft
-    ? PAGE_DIMENSIONS.marginOuterPt
-    : PAGE_DIMENSIONS.marginInnerPt
+    ? dim.marginOuterPt
+    : dim.marginInnerPt
   const marginRight = isLeft
-    ? PAGE_DIMENSIONS.marginInnerPt
-    : PAGE_DIMENSIONS.marginOuterPt
+    ? dim.marginInnerPt
+    : dim.marginOuterPt
 
   const columnsHtml = page.columns
     .map((col) => renderColumn(col))
     .join('\n')
 
   const pageStyle = [
-    `width:${PAGE_DIMENSIONS.widthPt}pt`,
-    `height:${PAGE_DIMENSIONS.heightPt}pt`,
-    `padding:${PAGE_DIMENSIONS.marginTopPt}pt ${marginRight}pt ${PAGE_DIMENSIONS.marginBottomPt}pt ${marginLeft}pt`,
+    `width:${dim.widthPt}pt`,
+    `height:${dim.heightPt}pt`,
+    `padding:${dim.marginTopPt}pt ${marginRight}pt ${dim.marginBottomPt}pt ${marginLeft}pt`,
     'page-break-after:always',
     'overflow:hidden',
     'position:relative',
@@ -54,9 +56,9 @@ function renderPage(
 
   const pageNumStyle = [
     'position:absolute',
-    `bottom:72pt`,
+    'bottom:61pt',
     'font-size:9pt',
-    isLeft ? `left:${PAGE_DIMENSIONS.marginOuterPt}pt` : `right:${PAGE_DIMENSIONS.marginInnerPt}pt`,
+    isLeft ? 'left:32pt' : 'right:32pt',
   ].join(';')
 
   return `<div class="page layout-${layoutId.toLowerCase()}" style="${pageStyle}">

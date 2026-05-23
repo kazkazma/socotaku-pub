@@ -100,17 +100,17 @@ html, body {
 
 .page-number {
   position: absolute;
-  bottom: 0;
+  bottom: 61pt;
   font-size: 9pt;
   writing-mode: horizontal-tb;
 }
 
 .page-number.left {
-  left: var(--margin-outer);
+  left: 32pt;
   text-align: left;
 }
 
 .page-number.right {
-  right: var(--margin-inner);
+  right: 32pt;
   text-align: right;
 }

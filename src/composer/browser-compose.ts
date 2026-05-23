@@ -1,15 +1,13 @@
-import { PAGE_DIMENSIONS } from '../types'
-
-const PAGE_LEFT = PAGE_DIMENSIONS.marginOuterPt
-const PAGE_RIGHT = PAGE_DIMENSIONS.marginInnerPt
-const PAGE_TOP = PAGE_DIMENSIONS.marginTopPt
-const PAGE_BOTTOM = PAGE_DIMENSIONS.marginBottomPt
-
 ;(window as any).browserCompose = function (
   nodes: any[],
   initialLayout: string,
   templates: Record<string, any>,
+  dimensions: { marginOuterPt: number; marginInnerPt: number; marginTopPt: number; marginBottomPt: number },
 ): any[] {
+  const PAGE_LEFT = dimensions.marginOuterPt
+  const PAGE_RIGHT = dimensions.marginInnerPt
+  const PAGE_TOP = dimensions.marginTopPt
+  const PAGE_BOTTOM = dimensions.marginBottomPt
 
   const composeArea = document.getElementById('compose-area')!
   const pages: any[] = []

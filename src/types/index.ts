@@ -65,16 +65,13 @@ export type Page = {
   columns: PageColumn[]
 }
 
-export const PAGE_DIMENSIONS = {
-  widthPt: 516,
-  heightPt: 729,
-  marginTopPt: 61,
-  marginBottomPt: 61,
-  marginInnerPt: 80,
-  marginOuterPt: 61,
-} as const
-
-export const PAGE_CONTENT_WIDTH_PT =
-  PAGE_DIMENSIONS.widthPt -
-  PAGE_DIMENSIONS.marginInnerPt -
-  PAGE_DIMENSIONS.marginOuterPt
+export type PageDimensions = {
+  widthPt: number
+  heightPt: number
+  widthMm: number
+  heightMm: number
+  marginTopPt: number
+  marginBottomPt: number
+  marginInnerPt: number
+  marginOuterPt: number
+}

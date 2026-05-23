@@ -1,5 +1,5 @@
 import type { Page } from 'puppeteer'
-import type { ContentNode, LayoutId, TemplateRegistry } from '../types'
+import type { ContentNode, LayoutId, TemplateRegistry, PageDimensions } from '../types'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -8,11 +8,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export class BrowserComposer {
   private page: Page
   private registry: TemplateRegistry
+  private dimensions: PageDimensions
   private initialized = false
 
-  constructor(page: Page, registry: TemplateRegistry) {
+  constructor(page: Page, registry: TemplateRegistry, dimensions: PageDimensions) {
     this.page = page
     this.registry = registry
+    this.dimensions = dimensions
   }
 
   async init(): Promise<void> {
@@ -71,12 +73,13 @@ export class BrowserComposer {
         if (typeof fn !== 'function') {
           throw new Error('browserCompose is not defined on window')
         }
-        return fn(params.nodes, params.initialLayout, params.templates)
+        return fn(params.nodes, params.initialLayout, params.templates, params.dimensions)
       },
       {
         nodes: JSON.parse(JSON.stringify(nodes)),
         initialLayout,
         templates: this.registry.templates,
+        dimensions: this.dimensions,
       },
     )
 

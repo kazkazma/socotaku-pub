@@ -44,7 +44,7 @@ async function main() {
   }
 
   console.log('Loading templates...')
-  const registry = await loadTemplates(templateDir)
+  const { registry, dimensions } = await loadTemplates(templateDir)
 
   console.log('Launching Puppeteer...')
   const browser = await puppeteer.launch({
@@ -54,7 +54,7 @@ async function main() {
   const bwPage = await browser.newPage()
   await bwPage.setViewport({ width: 800, height: 1100 })
 
-  const composer = new BrowserComposer(bwPage, registry)
+  const composer = new BrowserComposer(bwPage, registry, dimensions)
   await composer.init()
   console.log('Composing pages...')
   const pages = await composer.compose(allNodes, 'A')
@@ -75,7 +75,7 @@ async function main() {
     }
   }
 
-  const { html: fullHtml } = buildPageHtml(pages, registry.combinedCss)
+  const { html: fullHtml } = buildPageHtml(pages, dimensions, registry.combinedCss)
   const htmlPath = join(outputDir, 'output.html')
   await Bun.write(htmlPath, fullHtml)
   console.log(`HTML written to ${htmlPath}`)
@@ -83,7 +83,7 @@ async function main() {
   const outputPath = join(outputDir, 'output.pdf')
 
   console.log('Rendering PDF...')
-  await renderPdf(fullHtml, outputPath)
+  await renderPdf(fullHtml, outputPath, dimensions)
 
   await browser.close()
   console.log(`Done: ${outputPath}`)

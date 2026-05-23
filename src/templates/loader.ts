@@ -1,9 +1,41 @@
 import { resolve, join } from 'path'
-import type { TemplateRegistry, TemplatePackage } from '../types'
+import type { TemplateRegistry, TemplatePackage, PageDimensions } from '../types'
 
 const PACKAGE_DIRS = ['layout-a', 'layout-b']
 
-export async function loadTemplates(templateDir: string): Promise<TemplateRegistry> {
+function parseCssDimensions(css: string): PageDimensions {
+  const rootMatch = css.match(/:root\s*\{([^}]*)\}/s)
+  if (!rootMatch) throw new Error('Missing :root block in base CSS')
+
+  const root = rootMatch[1]!
+
+  const getVal = (name: string): string => {
+    const m = root.match(new RegExp(`--${name}:\\s*([^;]+)`))
+    if (!m) throw new Error(`CSS variable --${name} not found in :root`)
+    return m[1]!.trim()
+  }
+
+  const parsePt = (v: string): number => parseFloat(v.replace(/pt$/, ''))
+  const parseMm = (v: string): number => parseFloat(v.replace(/mm$/, ''))
+  const mmToPt = (mm: number): number => Math.round(mm * 72 / 25.4)
+
+  const widthMm = parseMm(getVal('page-width'))
+  const heightMm = parseMm(getVal('page-height'))
+
+  return {
+    widthPt: mmToPt(widthMm),
+    heightPt: mmToPt(heightMm),
+    widthMm,
+    heightMm,
+    marginTopPt: parsePt(getVal('margin-top')),
+    marginBottomPt: parsePt(getVal('margin-bottom')),
+    marginInnerPt: parsePt(getVal('margin-inner')),
+    marginOuterPt: parsePt(getVal('margin-outer')),
+  }
+}
+
+export async function loadTemplates(templateDir: string):
+  Promise<{ registry: TemplateRegistry; dimensions: PageDimensions }> {
   const baseCss = await Bun.file(join(templateDir, 'base', 'style.css')).text()
 
   const templates: Record<string, TemplatePackage> = {}
@@ -26,5 +58,8 @@ export async function loadTemplates(templateDir: string): Promise<TemplateRegist
 
   const combinedCss = allCssParts.join('\n')
 
-  return { baseCss, combinedCss, templates }
+  return {
+    registry: { baseCss, combinedCss, templates },
+    dimensions: parseCssDimensions(baseCss),
+  }
 }

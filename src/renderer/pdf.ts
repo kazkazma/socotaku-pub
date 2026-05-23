@@ -1,8 +1,10 @@
 import puppeteer from 'puppeteer'
+import type { PageDimensions } from '../types'
 
 export async function renderPdf(
   html: string,
   outputPath: string,
+  dimensions: PageDimensions,
 ): Promise<void> {
   const browser = await puppeteer.launch({
     headless: true,
@@ -29,8 +31,8 @@ export async function renderPdf(
   const mmToIn = (mm: number) => (mm / 25.4).toFixed(2) + 'in'
   await page.pdf({
     path: outputPath,
-    width: mmToIn(182),
-    height: mmToIn(257),
+    width: mmToIn(dimensions.widthMm),
+    height: mmToIn(dimensions.heightMm),
     printBackground: true,
     margin: { top: '0', right: '0', bottom: '0', left: '0' },
   })
