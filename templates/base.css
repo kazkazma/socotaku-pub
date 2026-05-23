@@ -17,14 +17,17 @@
 :root {
   --font-body: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
   --font-footnote: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-endnote: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
   --font-quote: '標楷體', 'Times New Roman', serif;
   --color-text: #1a1a1a;
   --color-footnote: #555;
   --font-size-body: 11pt;
   --font-size-footnote: 9pt;
+  --font-size-endnote: 9pt;
   --font-size-h2: 14pt;
-  --line-height-body: 19.8pt;
+  --line-height-body: 1.8;
   --letter-spacing-body: 0.68pt;
+  --margin-block-end: 19.8pt; /* 1.8 * 11pt */
   --page-width: 182mm;
   --page-height: 257mm;
   --margin-top: 61pt;
@@ -70,14 +73,14 @@ html, body {
 
 .column p {
   margin: 0;
-  margin-block-end: 19.8pt;
+  margin-block-end: var(--margin-block-end);
   text-align: justify;
 }
 
 .column h2 {
   font-size: var(--font-size-h2);
   font-weight: 600;
-  margin-block-end: 19.8pt;
+  margin-block-end: var(--margin-block-end);
   text-align: justify;
   text-indent: 0;
 }
@@ -89,7 +92,26 @@ html, body {
 
 .column .footnote-text {
   font-size: var(--font-size-footnote);
-  margin-block-end: 19.8pt;
+  margin-block-end: 1pt;
+  text-align: justify;
+  text-indent: 0;
+}
+
+.column .endnote-heading {
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+  margin-block-end: var(--margin-block-end);
+  text-align: justify;
+  text-indent: 0;
+}
+
+.column .endnote-text {
+  font-size: var(--font-size-endnote);
+  color: var(--color-footnote);
+  font-family: var(--font-endnote);
+  line-height: 1.2;
+  letter-spacing: 0.3pt;
+  margin-block-end: 16.2pt;
   text-align: justify;
   text-indent: 0;
 }

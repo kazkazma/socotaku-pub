@@ -14,17 +14,31 @@
   const pageEls: HTMLElement[] = []
   const defMap = new Map<string, string>()
   const refsPerPage = new Map<number, Array<{ refId: string; displayId: string }>>()
+  // Pre-build displayId → refId lookup from all footnote_ref nodes
+  const fnRefMap = new Map<string, string>()
+  for (const node of nodes) {
+    if (node.type === 'footnote_ref') {
+      fnRefMap.set(node.displayId || node.id, node.id)
+    }
+  }
   let currentTemplate = templates[initialLayout]
-  let pageData = createPageData(currentTemplate)
   let pageEl = buildPageDOM(currentTemplate, composeArea)
+  let pageData = createPageData(pageEl)
   pageEls.push(pageEl)
 
   // ── Helpers ──
 
-  function createPageData(tpl: any): any {
+  function createPageData(pageEl: HTMLElement): any {
+    const colEls = Array.from(pageEl.querySelectorAll('[data-column]'))
     return {
-      layoutId: tpl.manifest.id,
-      columns: tpl.manifest.columns.map((c: any) => ({ def: { id: c.id, type: c.type }, nodes: [] })),
+      layoutId: pageEl.dataset.layout || '',
+      columns: colEls.map((el) => ({
+        def: {
+          id: el.getAttribute('data-column') || '',
+          type: el.getAttribute('data-col-type') || 'body',
+        },
+        nodes: [],
+      })),
     }
   }
 
@@ -45,12 +59,16 @@
     return pageEl.querySelector(`[data-column='${colId}']`)
   }
 
-  function getBodyColumnDefs(tpl: any): any[] {
-    return tpl.manifest.columns.filter((c: any) => c.type === 'body')
+  function getBodyColumnDefs(pageEl: HTMLElement): HTMLElement[] {
+    return Array.from(pageEl.querySelectorAll('[data-column][data-col-type="body"]'))
   }
 
-  function getFootnoteColumnDef(tpl: any): any | null {
-    return tpl.manifest.columns.find((c: any) => c.type === 'footnote') ?? null
+  function getFootnoteColumnDef(pageEl: HTMLElement): HTMLElement | null {
+    return pageEl.querySelector('[data-column][data-col-type="footnote"]')
+  }
+
+  function getColumnIndex(pageEl: HTMLElement, colEl: HTMLElement): number {
+    return Array.from(pageEl.querySelectorAll('[data-column]')).indexOf(colEl)
   }
 
   function isPageEmpty(pd: any): boolean {
@@ -69,6 +87,22 @@
     const colRect = colEl.getBoundingClientRect()
     const childRect = lastChild.getBoundingClientRect()
     return childRect.left < colRect.left - 1
+  }
+
+  function recordFnRefsFromText(text: string, pageIdx: number): void {
+    if (!text) return
+    const matches = text.matchAll(/\[(\d+)\]/g)
+    for (const match of matches) {
+      const displayId = match[1]
+      const refId = fnRefMap.get(displayId)
+      if (refId) {
+        if (!refsPerPage.has(pageIdx)) refsPerPage.set(pageIdx, [])
+        const existing = refsPerPage.get(pageIdx)!
+        if (!existing.some((r: any) => r.refId === refId)) {
+          existing.push({ refId, displayId })
+        }
+      }
+    }
   }
 
   function bodyCharsPerLine(colEl: HTMLElement): number {
@@ -116,27 +150,23 @@
 
   function tryPlaceAndSplit(
     node: any,
-    tpl: any,
     pageEl: HTMLElement,
     pageData: any,
     nextNode?: any,
   ): { placed: boolean; remainder: string | null } {
     const nodeType = node.type
     const text = node.text ?? ''
-    const bodyCols = getBodyColumnDefs(tpl)
+    const bodyCols = getBodyColumnDefs(pageEl)
     let fallbackCol: { el: HTMLElement; idx: number } | null = null
 
     // Phase 1: try to place the whole node
-    for (const col of bodyCols) {
-      const colEl = getColumnEl(pageEl, col.id)
-      if (!colEl) continue
-
+    for (const colEl of bodyCols) {
       const el = createElementForNode(nodeType, text)
       colEl.appendChild(el)
 
       if (!columnOverflows(colEl)) {
         // Node fits in this column
-        if (nodeType === 'heading' && nextNode?.type === 'paragraph') {
+        if (nodeType === 'heading' && !node.isEndnoteHeading && pageEl.dataset.role !== 'endnote' && nextNode?.type === 'paragraph') {
           const prefixLen = Math.min((nextNode.text ?? '').length, bodyCharsPerLine(colEl))
           const prefixEl = createElementForNode('paragraph', nextNode.text.slice(0, prefixLen))
           colEl.appendChild(prefixEl)
@@ -146,7 +176,7 @@
             colEl.removeChild(prefixEl)
             colEl.removeChild(el)
             if (!fallbackCol) {
-              fallbackCol = { el: colEl, idx: tpl.manifest.columns.indexOf(col) }
+              fallbackCol = { el: colEl, idx: getColumnIndex(pageEl, colEl) }
             }
             continue
           }
@@ -155,8 +185,9 @@
           colEl.removeChild(prefixEl)
         }
 
-        const colIdx = tpl.manifest.columns.indexOf(col)
+        const colIdx = getColumnIndex(pageEl, colEl)
         pageData.columns[colIdx].nodes.push(node)
+        recordFnRefsFromText(text, pages.length)
         return { placed: true, remainder: null }
       }
 
@@ -169,30 +200,27 @@
       const el = createElementForNode(nodeType, text)
       fallbackCol.el.appendChild(el)
       pageData.columns[fallbackCol.idx].nodes.push(node)
+      recordFnRefsFromText(text, pages.length)
       return { placed: true, remainder: null }
     }
 
     // Phase 2: split and place on first column that can take a prefix
-    for (const col of bodyCols) {
-      const colEl = getColumnEl(pageEl, col.id)
-      if (!colEl) continue
-
+    for (const colEl of bodyCols) {
       const [first, second] = splitAt(text, colEl, nodeType)
       if (!first) continue
 
       const el = createElementForNode(nodeType, first)
       colEl.appendChild(el)
-      const colIdx = tpl.manifest.columns.indexOf(col)
-      pageData.columns[colIdx].nodes.push({ type: nodeType, text: first })
+      const colIdx = getColumnIndex(pageEl, colEl)
+      pageData.columns[colIdx].nodes.push({ ...node, text: first })
+      recordFnRefsFromText(first, pages.length)
       return { placed: true, remainder: second || null }
     }
 
     return { placed: false, remainder: text }
   }
 
-  function placeFootnotes(allPages: any[], tpl: any): void {
-    if (!tpl) return
-
+  function placeFootnotes(allPages: any[]): void {
     const measurer = document.createElement('div')
     measurer.style.cssText = `writing-mode:vertical-rl;font-size:9pt;height:167pt;overflow:hidden;position:absolute;left:-9999px;top:0;width:375pt;`
     document.body.appendChild(measurer)
@@ -244,9 +272,9 @@
     if (nodeType === 'page_break') {
       if (!isPageEmpty(pageData)) {
         pages.push(pageData)
-        pageData = createPageData(currentTemplate)
         pageEl = buildPageDOM(currentTemplate, composeArea)
         pageEls.push(pageEl)
+        pageData = createPageData(pageEl)
       }
       continue
     }
@@ -256,66 +284,26 @@
         pages.push(pageData)
       }
       currentTemplate = templates[node.layout]
-      pageData = createPageData(currentTemplate)
       pageEl = buildPageDOM(currentTemplate, composeArea)
       pageEls.push(pageEl)
+      pageData = createPageData(pageEl)
       continue
     }
 
     if (nodeType === 'footnote_ref') {
-      const markerText = `[${node.displayId || node.id}]`
-      const bodyCols = getBodyColumnDefs(currentTemplate)
-      let placed = false
-
-      for (const col of bodyCols) {
-        const colEl = getColumnEl(pageEl, col.id)
-        if (!colEl) continue
-        const lastP = colEl.lastElementChild as HTMLElement
-        if (lastP && lastP.tagName === 'P') {
-          const orig = lastP.textContent || ''
-          lastP.textContent = orig + markerText
-          if (!columnOverflows(colEl)) {
-            const colIdx = currentTemplate.manifest.columns.indexOf(col)
-            const nodes = pageData.columns[colIdx].nodes
-            if (nodes.length > 0) {
-              const lastNode = nodes[nodes.length - 1]
-              if (lastNode.type === 'paragraph') {
-                lastNode.text = orig + markerText
-              }
-            }
-            placed = true
-            break
-          }
-          lastP.textContent = orig
-        }
-      }
-
-      if (!placed) {
-        if (!isPageEmpty(pageData)) {
-          pages.push(pageData)
-          pageData = createPageData(currentTemplate)
-          pageEl = buildPageDOM(currentTemplate, composeArea)
-          pageEls.push(pageEl)
-        }
-        const firstCol = getBodyColumnDefs(currentTemplate)[0]
-        const colEl = getColumnEl(pageEl, firstCol.id)
-        if (colEl) {
-          const p = document.createElement('p')
-          p.textContent = markerText
-          colEl.appendChild(p)
-          const colIdx = currentTemplate.manifest.columns.indexOf(firstCol)
-          pageData.columns[colIdx].nodes.push({ type: 'paragraph', text: markerText })
-        }
-      }
-
-      const pageIdx = pages.length
-      if (!refsPerPage.has(pageIdx)) refsPerPage.set(pageIdx, [])
-      refsPerPage.get(pageIdx)!.push({ refId: node.id, displayId: node.displayId || node.id })
+      // Handled by recordFnRefsFromText during paragraph placement
       continue
     }
 
     if (nodeType === 'footnote_def') {
-      if (node.text) defMap.set(node.id, node.text)
+      if (pageEl.dataset.role === 'endnote') {
+        if (node.text) {
+          const text = `[${node.displayId || node.id}] ${node.text}`
+          queue.unshift({ type: 'paragraph', text, isEndnote: true })
+        }
+      } else {
+        if (node.text) defMap.set(node.id, node.text)
+      }
       continue
     }
 
@@ -324,14 +312,14 @@
 
       let result: { placed: boolean; remainder: string | null }
       if (nodeType === 'heading') {
-        result = tryPlaceAndSplit(node, currentTemplate, pageEl, pageData, nextNode)
+        result = tryPlaceAndSplit(node, pageEl, pageData, nextNode)
       } else {
-        result = tryPlaceAndSplit(node, currentTemplate, pageEl, pageData)
+        result = tryPlaceAndSplit(node, pageEl, pageData)
       }
 
       if (result.placed) {
         if (result.remainder) {
-          queue.unshift({ type: nodeType, text: result.remainder } as any)
+          queue.unshift({ ...node, text: result.remainder })
         }
         continue
       }
@@ -339,20 +327,19 @@
       // Couldn't place even a prefix — push current page, retry on new page
       if (!isPageEmpty(pageData)) {
         pages.push(pageData)
-        pageData = createPageData(currentTemplate)
         pageEl = buildPageDOM(currentTemplate, composeArea)
         pageEls.push(pageEl)
+        pageData = createPageData(pageEl)
         queue.unshift(node)
         continue
       }
 
       // Empty page deadlock — force-place whole node (may overflow)
-      const firstCol = getBodyColumnDefs(currentTemplate)[0]
-      const colEl = getColumnEl(pageEl, firstCol.id)
-      if (colEl) {
+      const firstColEl = getBodyColumnDefs(pageEl)[0]
+      if (firstColEl) {
         const el = createElementForNode(nodeType, node.text ?? '')
-        colEl.appendChild(el)
-        const colIdx = currentTemplate.manifest.columns.indexOf(firstCol)
+        firstColEl.appendChild(el)
+        const colIdx = getColumnIndex(pageEl, firstColEl)
         pageData.columns[colIdx].nodes.push(node)
       }
       continue
@@ -363,9 +350,7 @@
     pages.push(pageData)
   }
 
-  if (currentTemplate) {
-    placeFootnotes(pages, currentTemplate)
-  }
+  placeFootnotes(pages)
 
   return pages
 }

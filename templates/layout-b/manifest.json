@@ -1,9 +1,0 @@
-{
-  "id": "B",
-  "name": "純正文三欄",
-  "columns": [
-    { "id": "col1", "type": "body", "selector": "[data-column='col1']" },
-    { "id": "col2", "type": "body", "selector": "[data-column='col2']" },
-    { "id": "col3", "type": "body", "selector": "[data-column='col3']" }
-  ]
-}

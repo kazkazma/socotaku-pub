@@ -71,16 +71,14 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
   if (!node.children || node.children.length === 0) return
 
   let textBuffer = ''
+  const refIds: string[] = []
 
   for (const child of node.children) {
     if (child.type === 'text') {
       textBuffer += child.value
     } else if (child.type === 'footnoteReference') {
-      if (textBuffer.trim()) {
-        nodes.push({ type: 'paragraph', text: textBuffer.trim() })
-      }
-      nodes.push({ type: 'footnote_ref', id: child.identifier })
-      textBuffer = ''
+      textBuffer += `[${child.identifier}]`
+      refIds.push(child.identifier)
     } else {
       textBuffer += extractText(child)
     }
@@ -88,6 +86,9 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
 
   if (textBuffer.trim()) {
     nodes.push({ type: 'paragraph', text: textBuffer.trim() })
+  }
+  for (const id of refIds) {
+    nodes.push({ type: 'footnote_ref', id })
   }
 }
 

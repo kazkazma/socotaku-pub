@@ -72,10 +72,12 @@ function renderColumn(col: any): string {
   const content = col.nodes
     .map((node: any) => {
       if (node.type === 'heading') {
-        return `<h2>${escapeHtml(node.text || '')}</h2>`
+        const cls = node.isEndnoteHeading ? ' class="endnote-heading"' : ''
+        return `<h2${cls}>${escapeHtml(node.text || '')}</h2>`
       }
       const html = replaceFnMarkers(escapeHtml(node.text || ''), isBody)
-      return `<p>${html}</p>`
+      const pCls = node.isEndnote ? ' class="endnote-text"' : ''
+      return `<p${pCls}>${html}</p>`
     })
     .join('\n')
 

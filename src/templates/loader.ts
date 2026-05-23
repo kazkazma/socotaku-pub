@@ -1,7 +1,7 @@
-import { resolve, join } from 'path'
+import { join } from 'path'
 import type { TemplateRegistry, TemplatePackage, PageDimensions } from '../types'
 
-const PACKAGE_DIRS = ['layout-a', 'layout-b']
+const LAYOUT_FILES = ['layout-a.html', 'layout-b.html', 'layout-c.html']
 
 function parseCssDimensions(css: string): PageDimensions {
   const rootMatch = css.match(/:root\s*\{([^}]*)\}/s)
@@ -34,23 +34,36 @@ function parseCssDimensions(css: string): PageDimensions {
   }
 }
 
+function extractCss(html: string): string {
+  return html.match(/<style>([\s\S]*?)<\/style>/)?.[1]?.trim() ?? ''
+}
+
+function stripStyleTag(html: string): string {
+  return html.replace(/<style>[\s\S]*?<\/style>/g, '').trim()
+}
+
+function extractLayoutId(html: string): string {
+  return html.match(/data-layout="([^"]+)"/)?.[1] ?? ''
+}
+
 export async function loadTemplates(templateDir: string):
   Promise<{ registry: TemplateRegistry; dimensions: PageDimensions }> {
-  const baseCss = await Bun.file(join(templateDir, 'base', 'style.css')).text()
+  const baseCss = await Bun.file(join(templateDir, 'base.css')).text()
 
   const templates: Record<string, TemplatePackage> = {}
   const allCssParts: string[] = [baseCss]
 
-  for (const dir of PACKAGE_DIRS) {
-    const dirPath = join(templateDir, dir)
-    const manifest = await Bun.file(join(dirPath, 'manifest.json')).json()
-    const pageHtml = await Bun.file(join(dirPath, 'page.html')).text()
-    const css = await Bun.file(join(dirPath, 'style.css')).text()
-    templates[manifest.id] = {
-      id: manifest.id,
+  for (const file of LAYOUT_FILES) {
+    const raw = await Bun.file(join(templateDir, file)).text()
+
+    const css = extractCss(raw)
+    const pageHtml = stripStyleTag(raw)
+    const id = extractLayoutId(raw)
+
+    templates[id] = {
+      id,
       pageHtml,
       css,
-      manifest,
     }
 
     allCssParts.push(css)

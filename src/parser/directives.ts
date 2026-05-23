@@ -1,6 +1,6 @@
 import { type ContentNode } from '../types'
 
-const LAYOUT_RE = /<!--\s*layout\s*:\s*(A|B)\s*-->/i
+const LAYOUT_RE = /<!--\s*layout\s*:\s*(A|B|C)\s*-->/i
 const PAGE_BREAK_RE = /<!--\s*page-break\s*-->/i
 
 export function detectDirective(html: string): ContentNode | null {
@@ -10,7 +10,7 @@ export function detectDirective(html: string): ContentNode | null {
     if (!layout) return null
     return {
       type: 'layout_switch',
-      layout: layout.toUpperCase() as 'A' | 'B',
+      layout: layout.toUpperCase() as 'A' | 'B' | 'C',
     }
   }
 

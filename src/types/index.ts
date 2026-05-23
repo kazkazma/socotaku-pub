@@ -30,23 +30,10 @@ export type ContentNode = {
   layout?: LayoutId
 }
 
-export type TemplateManifestColumn = {
-  id: string
-  type: ColumnType
-  selector: string
-}
-
-export type TemplateManifest = {
-  id: string
-  name?: string
-  columns: TemplateManifestColumn[]
-}
-
 export type TemplatePackage = {
   id: string
   pageHtml: string
   css: string
-  manifest: TemplateManifest
 }
 
 export type TemplateRegistry = {
