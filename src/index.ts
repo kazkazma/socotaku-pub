@@ -75,11 +75,15 @@ async function main() {
     }
   }
 
-  const { html } = buildPageHtml(pages)
+  const { html: fullHtml } = buildPageHtml(pages, combinedCss)
+  const htmlPath = join(outputDir, 'output.html')
+  await Bun.write(htmlPath, fullHtml)
+  console.log(`HTML written to ${htmlPath}`)
+
   const outputPath = join(outputDir, 'output.pdf')
 
   console.log('Rendering PDF...')
-  await renderPdf(html, outputPath, combinedCss)
+  await renderPdf(fullHtml, outputPath)
 
   await browser.close()
   console.log(`Done: ${outputPath}`)

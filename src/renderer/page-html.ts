@@ -1,9 +1,12 @@
 import { type Page, PAGE_DIMENSIONS } from '../types'
 
-export function buildPageHtml(pages: Page[]): { html: string } {
+export function buildPageHtml(
+  pages: Page[],
+  cssContent?: string,
+): { html: string } {
   const pageDivs = pages.map((page, i) => renderPage(page, i + 1))
 
-  const html = `<!DOCTYPE html>
+  let html = `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="utf-8">
@@ -12,6 +15,13 @@ export function buildPageHtml(pages: Page[]): { html: string } {
 ${pageDivs.join('\n')}
 </body>
 </html>`
+
+  if (cssContent) {
+    html = html.replace(
+      '</head>',
+      `<style>${cssContent}</style></head>`,
+    )
+  }
 
   return { html }
 }

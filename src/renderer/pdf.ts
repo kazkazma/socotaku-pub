@@ -3,7 +3,6 @@ import puppeteer from 'puppeteer'
 export async function renderPdf(
   html: string,
   outputPath: string,
-  cssContent: string,
 ): Promise<void> {
   const browser = await puppeteer.launch({
     headless: true,
@@ -12,12 +11,7 @@ export async function renderPdf(
   const page = await browser.newPage()
   await page.setViewport({ width: 800, height: 1100 })
 
-  const fullHtml = html.replace(
-    '</head>',
-    `<style>${cssContent}</style></head>`,
-  )
-
-  await page.setContent(fullHtml, { waitUntil: 'load' })
+  await page.setContent(html, { waitUntil: 'load' })
 
   try {
     await page.evaluate(() =>
