@@ -66,10 +66,6 @@ function renderPage(
 }
 
 function renderColumn(col: any): string {
-  const fontSize = col.def.type === 'footnote' ? '9pt' : '11pt'
-  const lineHeight = col.def.type === 'footnote' ? '1.6' : '19.8pt'
-  const letterSpacing = col.def.type === 'footnote' ? '0.3pt' : '0.7pt'
-
   const content = col.nodes
     .map((node: any) => {
       if (node.type === 'heading') {
@@ -80,15 +76,8 @@ function renderColumn(col: any): string {
     .join('\n')
 
   const colClass = `column ${col.def.type} ${col.def.id}`
-  const colStyle = [
-    `writing-mode:vertical-rl`,
-    `font-size:${fontSize}`,
-    `line-height:${lineHeight}`,
-    `letter-spacing:${letterSpacing}`,
-    'width:100%',
-  ].join(';')
 
-  return `<div class="${colClass}" style="${colStyle}">
+  return `<div class="${colClass}">
 ${content}
 </div>`
 }

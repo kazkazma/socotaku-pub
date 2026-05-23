@@ -1,4 +1,4 @@
-import { type Page, type LayoutDef, type LayoutId } from '../types'
+import { type Page, type LayoutDef, type LayoutId, type ContentNode } from '../types'
 
 export function createPage(layout: LayoutDef): Page {
   return {
@@ -24,6 +24,10 @@ export function getFootnoteColumn(page: Page): number | null {
 
 export function isPageEmpty(page: Page): boolean {
   return page.columns.every((c) => c.nodes.length === 0)
+}
+
+export function getColumnNodes(page: Page, colIdx: number): ContentNode[] {
+  return page.columns[colIdx]?.nodes ?? []
 }
 
 export function getColumnText(page: Page, colIdx: number): string {

@@ -1,0 +1,116 @@
+@page {
+  size: 182mm 257mm;
+  margin: 0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: 'Noto Serif TC';
+  src: local('Noto Serif TC'), local('NotoSerifCJKtc');
+}
+
+:root {
+  --font-body: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-footnote: 'Noto Serif TC', 'Noto Serif CJK TC', serif;
+  --font-quote: '標楷體', 'Times New Roman', serif;
+  --color-text: #1a1a1a;
+  --color-footnote: #555;
+  --font-size-body: 11pt;
+  --font-size-footnote: 9pt;
+  --font-size-h2: 14pt;
+  --line-height-body: 19.8pt;
+  --letter-spacing-body: 0.68pt;
+  --page-width: 182mm;
+  --page-height: 257mm;
+  --margin-top: 61pt;
+  --margin-bottom: 61pt;
+  --margin-inner: 80pt;
+  --margin-outer: 61pt;
+}
+
+html, body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: white;
+}
+
+.page {
+  width: var(--page-width);
+  height: var(--page-height);
+  page-break-after: always;
+  overflow: hidden;
+  position: relative;
+}
+
+.column {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  overflow: hidden;
+}
+
+.column.body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  letter-spacing: var(--letter-spacing-body);
+  width: 100%;
+}
+
+.column.footnote {
+  font-size: var(--font-size-footnote);
+  line-height: 1.6;
+  letter-spacing: 0.3pt;
+  color: var(--color-footnote);
+  width: 100%;
+}
+
+.column p {
+  margin: 0;
+  margin-block-end: 19.8pt;
+  text-align: justify;
+}
+
+.column h2 {
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+  margin-block-end: 19.8pt;
+  text-align: justify;
+  text-indent: 0;
+}
+
+.column .footnote-ref {
+  font-size: 0.7em;
+  vertical-align: super;
+}
+
+.column .footnote-text {
+  font-size: var(--font-size-footnote);
+  margin-block-end: 19.8pt;
+  text-align: justify;
+  text-indent: 0;
+}
+
+.quote {
+  font-family: var(--font-quote);
+}
+
+.page-number {
+  position: absolute;
+  bottom: 0;
+  font-size: 9pt;
+  writing-mode: horizontal-tb;
+}
+
+.page-number.left {
+  left: var(--margin-outer);
+  text-align: left;
+}
+
+.page-number.right {
+  right: var(--margin-inner);
+  text-align: right;
+}

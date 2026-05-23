@@ -3,37 +3,15 @@ export type ColumnType = 'body' | 'footnote'
 export type ColumnDef = {
   id: string
   type: ColumnType
+}
+
+export type LayoutId = string
+
+export type MeasureOptions = {
   heightPt: number
-}
-
-export type LayoutId = 'A' | 'B'
-
-export type LayoutDef = {
-  id: LayoutId
-  columns: ColumnDef[]
-}
-
-export const LAYOUT_A: LayoutDef = {
-  id: 'A',
-  columns: [
-    { id: 'top', type: 'body', heightPt: 187 },
-    { id: 'middle', type: 'body', heightPt: 187 },
-    { id: 'bottom', type: 'footnote', heightPt: 167 },
-  ],
-}
-
-export const LAYOUT_B: LayoutDef = {
-  id: 'B',
-  columns: [
-    { id: 'col1', type: 'body', heightPt: 187 },
-    { id: 'col2', type: 'body', heightPt: 187 },
-    { id: 'col3', type: 'body', heightPt: 187 },
-  ],
-}
-
-export const LAYOUTS: Record<LayoutId, LayoutDef> = {
-  A: LAYOUT_A,
-  B: LAYOUT_B,
+  blockExtentPt: number
+  colType: ColumnType
+  writingMode: 'vertical-rl' | 'horizontal-tb'
 }
 
 export type ContentType =
@@ -50,6 +28,31 @@ export type ContentNode = {
   level?: number
   id?: string
   layout?: LayoutId
+}
+
+export type TemplateManifestColumn = {
+  id: string
+  type: ColumnType
+  selector: string
+}
+
+export type TemplateManifest = {
+  id: string
+  name?: string
+  columns: TemplateManifestColumn[]
+}
+
+export type TemplatePackage = {
+  id: string
+  pageHtml: string
+  css: string
+  manifest: TemplateManifest
+}
+
+export type TemplateRegistry = {
+  baseCss: string
+  combinedCss: string
+  templates: Record<string, TemplatePackage>
 }
 
 export type PageColumn = {

@@ -1,9 +1,9 @@
 import { Glob } from 'bun'
 import { parseMarkdown } from './parser'
-import { PageComposer } from './composer'
-import { Measurer } from './composer/measurer'
+import { BrowserComposer } from './composer'
 import { buildPageHtml } from './renderer/page-html'
 import { renderPdf } from './renderer/pdf'
+import { loadTemplates } from './templates/loader'
 import puppeteer from 'puppeteer'
 import { resolve, join } from 'path'
 
@@ -36,13 +36,8 @@ async function main() {
     allNodes.push(...result.nodes)
   }
 
-  console.log('Loading CSS...')
-  const cssContents = [
-    await Bun.file(join(templateDir, 'base.css')).text(),
-    await Bun.file(join(templateDir, 'layout-a.css')).text(),
-    await Bun.file(join(templateDir, 'layout-b.css')).text(),
-  ]
-  const combinedCss = cssContents.join('\n')
+  console.log('Loading templates...')
+  const registry = await loadTemplates(templateDir)
 
   console.log('Launching Puppeteer...')
   const browser = await puppeteer.launch({
@@ -52,12 +47,10 @@ async function main() {
   const bwPage = await browser.newPage()
   await bwPage.setViewport({ width: 800, height: 1100 })
 
-  const measurer = new Measurer(bwPage)
-  await measurer.init(combinedCss)
-
-  const composer = new PageComposer(measurer, 'A')
+  const composer = new BrowserComposer(bwPage, registry)
+  await composer.init()
   console.log('Composing pages...')
-  const pages = await composer.compose(allNodes)
+  const pages = await composer.compose(allNodes, 'A')
   console.log(`Generated ${pages.length} page(s)`)
 
   for (let pi = 0; pi < pages.length && pi < 3; pi++) {
@@ -75,7 +68,7 @@ async function main() {
     }
   }
 
-  const { html: fullHtml } = buildPageHtml(pages, combinedCss)
+  const { html: fullHtml } = buildPageHtml(pages, registry.combinedCss)
   const htmlPath = join(outputDir, 'output.html')
   await Bun.write(htmlPath, fullHtml)
   console.log(`HTML written to ${htmlPath}`)

@@ -1,0 +1,9 @@
+{
+  "id": "A",
+  "name": "正文雙欄加腳註",
+  "columns": [
+    { "id": "top", "type": "body", "selector": "[data-column='top']" },
+    { "id": "middle", "type": "body", "selector": "[data-column='middle']" },
+    { "id": "bottom", "type": "footnote", "selector": "[data-column='bottom']" }
+  ]
+}
