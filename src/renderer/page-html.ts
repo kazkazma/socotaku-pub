@@ -1,5 +1,8 @@
 import type { Page, PageDimensions } from '../types'
 
+/**
+ * 將 Pages 陣列渲染為完整的 HTML 字串（可選擇嵌入 CSS）
+ */
 export function buildPageHtml(
   pages: Page[],
   dimensions: PageDimensions,
@@ -27,12 +30,14 @@ ${pageDivs.join('\n')}
   return { html }
 }
 
+/** 將單一 Page 渲染為 HTML 字串，含 page-number 與邊距設定 */
 function renderPage(
   page: Page,
   pageNum: number,
   dim: PageDimensions,
 ): string {
   const layoutId = page.layoutId
+  // 左頁/右頁交錯邊距（奇數頁＝左頁）
   const isLeft = pageNum % 2 === 1
   const marginLeft = isLeft
     ? dim.marginOuterPt
@@ -67,6 +72,7 @@ function renderPage(
 </div>`
 }
 
+/** 將單一欄位的節點列表渲染為 HTML */
 function renderColumn(col: any): string {
   const isBody = col.def.type === 'body'
   const content = col.nodes
@@ -88,6 +94,10 @@ ${content}
 </div>`
 }
 
+/**
+ * 將文字中的 [n] 註腳標記轉換為 SVG 圓形數字圖示
+ * @param wrapInSpan 正文中包 <span class="footnote-ref">，註腳欄內只給 SVG
+ */
 function replaceFnMarkers(text: string, wrapInSpan: boolean): string {
   return text.replace(/\[(\w+)\]/g, (match, id) => {
     const n = parseInt(id, 10)
@@ -99,6 +109,7 @@ function replaceFnMarkers(text: string, wrapInSpan: boolean): string {
   })
 }
 
+/** HTML 跳脫（& < > " '） */
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

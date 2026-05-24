@@ -1,41 +1,34 @@
-import puppeteer from 'puppeteer'
 import type { PageDimensions } from '../types'
+import { launchHeadlessBrowser, newSizedPage, waitForFonts } from '../browser/puppeteer'
 
+/**
+ * 將 HTML 內容透過 Puppeteer 渲染為 PDF
+ * （內部自行管理 browser lifecycle）
+ */
 export async function renderPdf(
   html: string,
   outputPath: string,
   dimensions: PageDimensions,
 ): Promise<void> {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-gpu'],
-  })
-  const page = await browser.newPage()
-  await page.setViewport({ width: 800, height: 1100 })
-
-  await page.setContent(html, { waitUntil: 'load' })
-
+  const browser = await launchHeadlessBrowser()
   try {
-    await page.evaluate(() =>
-      Promise.race([
-        (document as any).fonts.ready,
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('fonts timeout')), 5000),
-        ),
-      ]),
-    )
-  } catch {
-    // fonts may not be installed; render with fallback
+    const page = await newSizedPage(browser, dimensions)
+    await page.setContent(html, { waitUntil: 'load' })
+    await waitForFonts(page)
+
+    // mm → inch（Puppeteer 使用 inch 為單位）
+    const mmToIn = (mm: number) => (mm / 25.4).toFixed(2) + 'in'
+    await page.pdf({
+      path: outputPath,
+      width: mmToIn(dimensions.widthMm),
+      height: mmToIn(dimensions.heightMm),
+      printBackground: true,
+      // 邊距已內嵌在 HTML 中（page padding）
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+    })
+
+    await page.close()
+  } finally {
+    await browser.close()
   }
-
-  const mmToIn = (mm: number) => (mm / 25.4).toFixed(2) + 'in'
-  await page.pdf({
-    path: outputPath,
-    width: mmToIn(dimensions.widthMm),
-    height: mmToIn(dimensions.heightMm),
-    printBackground: true,
-    margin: { top: '0', right: '0', bottom: '0', left: '0' },
-  })
-
-  await browser.close()
 }

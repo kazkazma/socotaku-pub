@@ -1,3 +1,4 @@
+;// 瀏覽器端執行的排版組合引擎（經 Bun.build 打包注入）
 ;(window as any).browserCompose = function (
   nodes: any[],
   initialLayout: string,
@@ -14,7 +15,7 @@
   const pageEls: HTMLElement[] = []
   const defMap = new Map<string, string>()
   const refsPerPage = new Map<number, Array<{ refId: string; displayId: string }>>()
-  // Pre-build displayId → refId lookup from all footnote_ref nodes
+  // 預先建立 displayId → refId 查表（從所有 footnote_ref 節點）
   const fnRefMap = new Map<string, string>()
   for (const node of nodes) {
     if (node.type === 'footnote_ref') {
@@ -26,8 +27,9 @@
   let pageData = createPageData(pageEl)
   pageEls.push(pageEl)
 
-  // ── Helpers ──
+  // ── 輔助函式 ──
 
+  // 從 pageEl 的 DOM 結構建立頁面資料物件
   function createPageData(pageEl: HTMLElement): any {
     const colEls = Array.from(pageEl.querySelectorAll('[data-column]'))
     return {
@@ -39,15 +41,18 @@
         },
         nodes: [],
       })),
+      _nextBodyCol: 0, // 下一個嘗試放置的正文欄索引
     }
   }
 
+  // 從 HTML 字串建立 DOM 元素
   function createElementFromHTML(html: string): HTMLElement {
     const div = document.createElement('div')
     div.innerHTML = html.trim()
     return div.firstElementChild as HTMLElement
   }
 
+  // 建立頁面 DOM 並填入邊距 padding
   function buildPageDOM(tpl: any, parent: HTMLElement): HTMLElement {
     const pageEl = createElementFromHTML(tpl.pageHtml)
     pageEl.style.padding = `${PAGE_TOP}pt ${PAGE_RIGHT}pt ${PAGE_BOTTOM}pt ${PAGE_LEFT}pt`
@@ -55,32 +60,41 @@
     return pageEl
   }
 
+  // 依 data-column 屬性取得欄位元素
   function getColumnEl(pageEl: HTMLElement, colId: string): HTMLElement | null {
     return pageEl.querySelector(`[data-column='${colId}']`)
   }
 
+  // 取得所有正文欄元素
   function getBodyColumnDefs(pageEl: HTMLElement): HTMLElement[] {
     return Array.from(pageEl.querySelectorAll('[data-column][data-col-type="body"]'))
   }
 
+  // 取得註腳欄元素（若無則回傳 null）
   function getFootnoteColumnDef(pageEl: HTMLElement): HTMLElement | null {
     return pageEl.querySelector('[data-column][data-col-type="footnote"]')
   }
 
+  // 計算某欄位在頁面中的索引
   function getColumnIndex(pageEl: HTMLElement, colEl: HTMLElement): number {
     return Array.from(pageEl.querySelectorAll('[data-column]')).indexOf(colEl)
   }
 
+  // 檢查頁面資料是否為空
   function isPageEmpty(pd: any): boolean {
     return pd.columns.every((c: any) => c.nodes.length === 0)
   }
 
-  function createElementForNode(nodeType: string, text: string): HTMLElement {
+  // 為節點建立對應的 DOM 元素
+  function createElementForNode(nodeType: string, text: string, node?: any): HTMLElement {
     const el = document.createElement(nodeType === 'heading' ? 'h2' : 'p')
     el.textContent = text
+    if (node?.isEndnote) el.classList.add('endnote-text')
+    if (node?.isEndnoteHeading) el.classList.add('endnote-heading')
     return el
   }
 
+  // 檢查欄位內容是否溢出（最後子元素的 left < 欄位 left）
   function columnOverflows(colEl: HTMLElement): boolean {
     const lastChild = colEl.lastElementChild
     if (!lastChild) return false
@@ -89,11 +103,12 @@
     return childRect.left < colRect.left - 1
   }
 
+  // 從文字中掃描註腳引用標記 [n]，記錄到 refsPerPage
   function recordFnRefsFromText(text: string, pageIdx: number): void {
     if (!text) return
     const matches = text.matchAll(/\[(\d+)\]/g)
     for (const match of matches) {
-      const displayId = match[1]
+      const displayId = match[1]!
       const refId = fnRefMap.get(displayId)
       if (refId) {
         if (!refsPerPage.has(pageIdx)) refsPerPage.set(pageIdx, [])
@@ -105,6 +120,7 @@
     }
   }
 
+  // 計算每行可容納字數（以 inline 方向高度 ÷ 字元 advance）
   function bodyCharsPerLine(colEl: HTMLElement): number {
     const style = getComputedStyle(colEl)
     const fontSizePx = parseFloat(style.fontSize)
@@ -115,10 +131,12 @@
     return Math.max(1, Math.floor(inlinePx / charAdvancePx))
   }
 
-  function splitAt(text: string, colEl: HTMLElement, nodeType: string): [string, string] {
+  // 二分法拆分文字：在 colEl 中測試可容納的前綴長度
+  function splitAt(text: string, colEl: HTMLElement, nodeType: string, node?: any): [string, string] {
     if (!text) return ['', '']
 
-    const testEl = createElementForNode(nodeType, text)
+    // 先測試整段能否容納
+    const testEl = createElementForNode(nodeType, text, node)
     colEl.appendChild(testEl)
     if (!columnOverflows(colEl)) {
       colEl.removeChild(testEl)
@@ -126,6 +144,7 @@
     }
     colEl.removeChild(testEl)
 
+    // 二分搜尋最大可容納前綴長度
     let low = 0
     let high = text.length
     let best = 0
@@ -134,7 +153,7 @@
       const mid = Math.floor((low + high) / 2)
       if (mid === 0) { low = 1; continue }
 
-      const midEl = createElementForNode(nodeType, text.slice(0, mid))
+      const midEl = createElementForNode(nodeType, text.slice(0, mid), node)
       colEl.appendChild(midEl)
       if (!columnOverflows(colEl)) {
         best = mid
@@ -157,22 +176,25 @@
     const nodeType = node.type
     const text = node.text ?? ''
     const bodyCols = getBodyColumnDefs(pageEl)
+    const startIdx = Math.min(pageData._nextBodyCol ?? 0, bodyCols.length - 1)
     let fallbackCol: { el: HTMLElement; idx: number } | null = null
 
-    // Phase 1: try to place the whole node
-    for (const colEl of bodyCols) {
-      const el = createElementForNode(nodeType, text)
+    for (let bci = startIdx; bci < bodyCols.length; bci++) {
+      const colEl = bodyCols[bci]!
+      // 嘗試將整個節點放入此欄
+      const el = createElementForNode(nodeType, text, node)
       colEl.appendChild(el)
 
       if (!columnOverflows(colEl)) {
-        // Node fits in this column
+        // 節點可放入此欄
+        // 標題特殊處理：若標題 + 下一段第一行都能放入，則延遲到後面的欄位
         if (nodeType === 'heading' && !node.isEndnoteHeading && pageEl.dataset.role !== 'endnote' && nextNode?.type === 'paragraph') {
           const prefixLen = Math.min((nextNode.text ?? '').length, bodyCharsPerLine(colEl))
-          const prefixEl = createElementForNode('paragraph', nextNode.text.slice(0, prefixLen))
+          const prefixEl = createElementForNode('paragraph', nextNode.text.slice(0, prefixLen), node)
           colEl.appendChild(prefixEl)
 
           if (!columnOverflows(colEl)) {
-            // heading + prefix both fit → this column has room; defer to later column
+            // 標題 + 前綴都放得下 → 此欄還有空間，延遲到後面的欄位
             colEl.removeChild(prefixEl)
             colEl.removeChild(el)
             if (!fallbackCol) {
@@ -181,45 +203,47 @@
             continue
           }
 
-          // heading alone fits, prefix does not → accept here (tight fit)
+          // 標題可放但前綴放不下 → 就在此欄接受（緊密排版）
           colEl.removeChild(prefixEl)
         }
 
+        pageData._nextBodyCol = bci
         const colIdx = getColumnIndex(pageEl, colEl)
         pageData.columns[colIdx].nodes.push(node)
         recordFnRefsFromText(text, pages.length)
         return { placed: true, remainder: null }
       }
 
-      // Whole node does not fit in this column
+      // 整段放不下 → 移除嘗試拆分
       colEl.removeChild(el)
+
+      const [first, second] = splitAt(text, colEl, nodeType, node)
+      if (first) {
+        pageData._nextBodyCol = bci
+        const splitEl = createElementForNode(nodeType, first, node)
+        colEl.appendChild(splitEl)
+        const colIdx = getColumnIndex(pageEl, colEl)
+        pageData.columns[colIdx].nodes.push({ ...node, text: first })
+        recordFnRefsFromText(first, pages.length)
+        return { placed: true, remainder: second || null }
+      }
+      // 連前綴都放不下 → 嘗試下一欄
     }
 
-    // Fallback: use deferred column for heading
+    // 若先前有延遲的標題欄位，使用該欄作為 fallback
     if (fallbackCol) {
-      const el = createElementForNode(nodeType, text)
+      const el = createElementForNode(nodeType, text, node)
       fallbackCol.el.appendChild(el)
+      pageData._nextBodyCol = fallbackCol.idx
       pageData.columns[fallbackCol.idx].nodes.push(node)
       recordFnRefsFromText(text, pages.length)
       return { placed: true, remainder: null }
     }
 
-    // Phase 2: split and place on first column that can take a prefix
-    for (const colEl of bodyCols) {
-      const [first, second] = splitAt(text, colEl, nodeType)
-      if (!first) continue
-
-      const el = createElementForNode(nodeType, first)
-      colEl.appendChild(el)
-      const colIdx = getColumnIndex(pageEl, colEl)
-      pageData.columns[colIdx].nodes.push({ ...node, text: first })
-      recordFnRefsFromText(first, pages.length)
-      return { placed: true, remainder: second || null }
-    }
-
     return { placed: false, remainder: text }
   }
 
+  // 在已組好的頁面中填入註腳（使用隱藏 measurer 模擬垂直排版來測試空間）
   function placeFootnotes(allPages: any[]): void {
     const measurer = document.createElement('div')
     measurer.style.cssText = `writing-mode:vertical-rl;font-size:9pt;height:167pt;overflow:hidden;position:absolute;left:-9999px;top:0;width:375pt;`
@@ -232,6 +256,7 @@
       const fnCol = page.columns.find((c: any) => c.def.type === 'footnote')
       if (!fnCol) continue
 
+      // 收集此頁所有註腳引用對應的定義文字
       const refs = refsPerPage.get(i) ?? []
       for (const { refId, displayId } of refs) {
         const defText = defMap.get(refId)
@@ -240,8 +265,9 @@
         }
       }
 
+      // 逐一塞入註腳欄，直到空間不足為止
       while (pendingFootnotes.length > 0) {
-        const fn = pendingFootnotes[0]
+        const fn = pendingFootnotes[0]!
         const fnText = `[${fn.displayId}] ${fn.text}`
         const testP = document.createElement('p')
         testP.textContent = fnText
@@ -253,7 +279,7 @@
           pendingFootnotes.shift()
         } else {
           measurer.removeChild(testP)
-          break
+          break // 空間不足，等下一頁
         }
       }
 
@@ -263,12 +289,13 @@
     document.body.removeChild(measurer)
   }
 
-  // ── Main Loop ──
+  // ── 主迴圈：逐節點處理，分配到各頁各欄 ──
   const queue = [...nodes]
   while (queue.length > 0) {
     const node = queue.shift()!
     const nodeType = node.type
 
+    // 分頁指令：將當前頁面封存，建立新頁
     if (nodeType === 'page_break') {
       if (!isPageEmpty(pageData)) {
         pages.push(pageData)
@@ -279,6 +306,23 @@
       continue
     }
 
+    // 分欄指令：移動到下一個正文欄；若已到最後一欄則換頁
+    if (nodeType === 'column_break') {
+      const bodyCols = getBodyColumnDefs(pageEl)
+      if (pageData._nextBodyCol < bodyCols.length - 1) {
+        pageData._nextBodyCol++
+      } else {
+        if (!isPageEmpty(pageData)) {
+          pages.push(pageData)
+          pageEl = buildPageDOM(currentTemplate, composeArea)
+          pageEls.push(pageEl)
+          pageData = createPageData(pageEl)
+        }
+      }
+      continue
+    }
+
+    // 版面切換指令：封存當前頁，載入新版面
     if (nodeType === 'layout_switch') {
       if (!isPageEmpty(pageData)) {
         pages.push(pageData)
@@ -290,11 +334,12 @@
       continue
     }
 
+    // 註腳引用：已在 recordFnRefsFromText 中處理（掃描段落文字中的 [n] 標記）
     if (nodeType === 'footnote_ref') {
-      // Handled by recordFnRefsFromText during paragraph placement
       continue
     }
 
+    // 註腳定義：endnote 模式下直接插入為段落；一般模式下存入 defMap 供後續擺放
     if (nodeType === 'footnote_def') {
       if (pageEl.dataset.role === 'endnote') {
         if (node.text) {
@@ -307,8 +352,14 @@
       continue
     }
 
+    // 標題或段落：嘗試放入當前頁面，必要時拆分
     if (nodeType === 'heading' || nodeType === 'paragraph') {
       const nextNode = queue[0] ?? null
+
+      // endnote 環境下的標題標記為專用類型
+      if (nodeType === 'heading' && pageEl.dataset.role === 'endnote') {
+        node.isEndnoteHeading = true
+      }
 
       let result: { placed: boolean; remainder: string | null }
       if (nodeType === 'heading') {
@@ -318,13 +369,14 @@
       }
 
       if (result.placed) {
+        // 成功放置，若有剩餘文字則放回佇列前端繼續處理
         if (result.remainder) {
           queue.unshift({ ...node, text: result.remainder })
         }
         continue
       }
 
-      // Couldn't place even a prefix — push current page, retry on new page
+      // 完全無法放置（連前綴都放不下）→ 換新頁重試
       if (!isPageEmpty(pageData)) {
         pages.push(pageData)
         pageEl = buildPageDOM(currentTemplate, composeArea)
@@ -334,10 +386,10 @@
         continue
       }
 
-      // Empty page deadlock — force-place whole node (may overflow)
+      // 空頁面也放不下（死結）→ 強制放入，允許溢出
       const firstColEl = getBodyColumnDefs(pageEl)[0]
       if (firstColEl) {
-        const el = createElementForNode(nodeType, node.text ?? '')
+        const el = createElementForNode(nodeType, node.text ?? '', node)
         firstColEl.appendChild(el)
         const colIdx = getColumnIndex(pageEl, firstColEl)
         pageData.columns[colIdx].nodes.push(node)
@@ -346,10 +398,12 @@
     }
   }
 
+  // 處理最後一頁
   if (!isPageEmpty(pageData)) {
     pages.push(pageData)
   }
 
+  // 在已組好的頁面中填入註腳
   placeFootnotes(pages)
 
   return pages
