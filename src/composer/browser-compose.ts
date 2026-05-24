@@ -90,7 +90,7 @@
     const el = document.createElement(nodeType === 'heading' ? 'h2' : 'p')
     el.textContent = text
     if (node?.isEndnote) el.classList.add('endnote-text')
-    if (node?.isEndnoteHeading) el.classList.add('endnote-heading')
+
     return el
   }
 
@@ -188,7 +188,7 @@
       if (!columnOverflows(colEl)) {
         // 節點可放入此欄
         // 標題特殊處理：若標題 + 下一段第一行都能放入，則延遲到後面的欄位
-        if (nodeType === 'heading' && !node.isEndnoteHeading && pageEl.dataset.role !== 'endnote' && nextNode?.type === 'paragraph') {
+        if (nodeType === 'heading' && pageEl.dataset.role !== 'endnote' && nextNode?.type === 'paragraph') {
           const prefixLen = Math.min((nextNode.text ?? '').length, bodyCharsPerLine(colEl))
           const prefixEl = createElementForNode('paragraph', nextNode.text.slice(0, prefixLen), node)
           colEl.appendChild(prefixEl)
@@ -223,7 +223,7 @@
         const splitEl = createElementForNode(nodeType, first, node)
         colEl.appendChild(splitEl)
         const colIdx = getColumnIndex(pageEl, colEl)
-        pageData.columns[colIdx].nodes.push({ ...node, text: first })
+        pageData.columns[colIdx].nodes.push({ ...node, text: first, continues: nodeType === 'paragraph' })
         recordFnRefsFromText(first, pages.length)
         return { placed: true, remainder: second || null }
       }
@@ -355,11 +355,6 @@
     // 標題或段落：嘗試放入當前頁面，必要時拆分
     if (nodeType === 'heading' || nodeType === 'paragraph') {
       const nextNode = queue[0] ?? null
-
-      // endnote 環境下的標題標記為專用類型
-      if (nodeType === 'heading' && pageEl.dataset.role === 'endnote') {
-        node.isEndnoteHeading = true
-      }
 
       let result: { placed: boolean; remainder: string | null }
       if (nodeType === 'heading') {

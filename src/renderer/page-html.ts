@@ -78,11 +78,11 @@ function renderColumn(col: any): string {
   const content = col.nodes
     .map((node: any) => {
       if (node.type === 'heading') {
-        const cls = node.isEndnoteHeading ? ' class="endnote-heading"' : ''
-        return `<h2${cls}>${escapeHtml(node.text || '')}</h2>`
+        return `<h2>${escapeHtml(node.text || '')}</h2>`
       }
       const html = replaceFnMarkers(escapeHtml(node.text || ''), isBody)
-      const pCls = node.isEndnote ? ' class="endnote-text"' : ''
+      const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : ''].filter(Boolean)
+      const pCls = classes.length ? ` class="${classes.join(' ')}"` : ''
       return `<p${pCls}>${html}</p>`
     })
     .join('\n')

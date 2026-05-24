@@ -26,8 +26,17 @@
   --font-size-endnote: 9pt;
   --font-size-h2: 14pt;
   --line-height-body: 1.8;
+  --line-height-heading: 19.8pt;
+  --line-height-footnote: 1.6;
+  --line-height-endnote: 1.2;
   --letter-spacing-body: 0.68pt;
-  --margin-block-end: 19.8pt; /* 1.8 * 11pt */
+  --letter-spacing-heading: 0.68pt;
+  --letter-spacing-footnote: 0.3pt;
+  --letter-spacing-endnote: 0.3pt;
+  --margin-block-end-body: 19.8pt;
+  --margin-block-end-heading: 19.8pt;
+  --margin-block-end-footnote: 1pt;
+  --margin-block-end-endnote: 16.2pt;
   --page-width: 182mm;
   --page-height: 257mm;
   --margin-top: 61pt;
@@ -65,22 +74,28 @@ html, body {
 
 .column.footnote {
   font-size: var(--font-size-footnote);
-  line-height: 1.6;
-  letter-spacing: 0.3pt;
+  line-height: var(--line-height-footnote);
+  letter-spacing: var(--letter-spacing-footnote);
   color: var(--color-footnote);
   width: 100%;
 }
 
 .column p {
   margin: 0;
-  margin-block-end: var(--margin-block-end);
+  margin-block-end: var(--margin-block-end-body);
   text-align: justify;
+}
+
+.column .continues {
+  text-align-last: justify;
 }
 
 .column h2 {
   font-size: var(--font-size-h2);
   font-weight: 600;
-  margin-block-end: var(--margin-block-end);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-heading);
+  margin-block-end: var(--margin-block-end-heading);
   text-align: justify;
   text-indent: 0;
 }
@@ -92,15 +107,9 @@ html, body {
 
 .column .footnote-text {
   font-size: var(--font-size-footnote);
-  margin-block-end: 1pt;
-  text-align: justify;
-  text-indent: 0;
-}
-
-.column .endnote-heading {
-  font-size: var(--font-size-h2);
-  font-weight: 600;
-  margin-block-end: var(--margin-block-end);
+  line-height: var(--line-height-footnote);
+  letter-spacing: var(--letter-spacing-footnote);
+  margin-block-end: var(--margin-block-end-footnote);
   text-align: justify;
   text-indent: 0;
 }
@@ -109,9 +118,9 @@ html, body {
   font-size: var(--font-size-endnote);
   color: var(--color-footnote);
   font-family: var(--font-endnote);
-  line-height: 1.2;
-  letter-spacing: 0.3pt;
-  margin-block-end: 16.2pt;
+  line-height: var(--line-height-endnote);
+  letter-spacing: var(--letter-spacing-endnote);
+  margin-block-end: var(--margin-block-end-endnote);
   text-align: justify;
   text-indent: 0;
 }

@@ -57,6 +57,7 @@ type BaseNode = { type: ContentType };
 type ParagraphNode = BaseNode & {
   type: "paragraph";
   text: string; // 段落文字
+  continues?: boolean; // 自動分欄/分頁拆段後，此片段後方仍接續同一原始段落
 };
 
 /** 標題節點：含文字與層級 */
