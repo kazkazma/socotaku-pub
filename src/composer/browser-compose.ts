@@ -25,6 +25,9 @@
   // 從 pageEl 的 DOM 結構建立頁面資料物件
   function createPageData(pageEl: HTMLElement): any {
     const colEls = Array.from(pageEl.querySelectorAll('[data-column]'))
+    const staticHtml = Array.from(pageEl.children)
+      .filter((el) => !el.matches('.page-content'))
+      .map((el) => el.outerHTML)
     return {
       layoutId: pageEl.dataset.layout || '',
       columns: colEls.map((el) => ({
@@ -34,6 +37,7 @@
         },
         nodes: [],
       })),
+      staticHtml: staticHtml.length > 0 ? staticHtml : undefined,
       _nextBodyCol: 0, // 下一個嘗試放置的正文欄索引
     }
   }

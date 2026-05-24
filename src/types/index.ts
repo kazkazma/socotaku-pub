@@ -143,4 +143,6 @@ export type PageColumn = {
 export type Page = {
   layoutId: LayoutId;
   columns: PageColumn[];
+  /** 頁面內非 .page-content 的靜態子節點 HTML（如版權區、標籤） */
+  staticHtml?: string[];
 };

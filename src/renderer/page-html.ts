@@ -66,8 +66,11 @@ function renderPage(
     isLeft ? 'left:32pt' : 'right:32pt',
   ].join(';')
 
+  const staticHtml = page.staticHtml?.join('\n') ?? ''
+
   return `<div class="page layout-${layoutId.toLowerCase()}" style="${pageStyle}">
 <div class="page-content">${columnsHtml}</div>
+${staticHtml}
 <span class="page-number" style="${pageNumStyle}">${pageNum}</span>
 </div>`
 }
