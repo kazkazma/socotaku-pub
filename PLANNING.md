@@ -8,6 +8,7 @@ TypeScript + Bun 命令列工具，輸入 Markdown 稿件，套用特定已知�
 - 評論集、散文集等純文字為主的書籍
 - 版型 A：二欄內文 + 腳註欄（直排）
 - 版型 B：三欄純內文（直排）
+- 版型 C：三欄內文 + Endnote（直排）
 
 ### 核心流程
 
@@ -21,7 +22,7 @@ Markdown + HTML 註解指令
     Page Composer（分頁引擎：切割內容到各欄各頁）
         │
         ▼
-    Renderer（每頁 HTML → Vivliostyle → PDF）
+    Renderer（每頁 HTML → Puppeteer → PDF）
 ```
 
 ---
@@ -86,6 +87,28 @@ Markdown + HTML 註解指令
 └──────────────────────┘
 ```
 
+### 版型 C — 三欄純內文 + Endnote 模式
+
+與版型 B 結構相同，但 `data-role="endnote"` 標記告訴 renderer 將腳註定義渲染為文末注（endnote）段落而非頁尾腳註。
+
+```
+┌──────────────────────┐
+│    天  61pt          │
+├──────────────────────┤
+│  欄1  187pt (16字)   │  ← 內文
+├──────────────────────┤
+│  欄間距  22pt        │
+├──────────────────────┤
+│  欄2  187pt (16字)   │  ← 內文
+├──────────────────────┤
+│  欄間距  22pt        │
+├──────────────────────┤
+│  欄3  187pt (16字)   │  ← 內文 / Endnote
+├──────────────────────┤
+│    地  61pt          │
+└──────────────────────┘
+```
+
 ---
 
 ## 輸入格式
@@ -115,8 +138,10 @@ Markdown + HTML 註解指令
 |------|------|------|
 | `<!-- layout: A -->` | 切換至版型 A | 可在一本書中任意切換 |
 | `<!-- layout: B -->` | 切換至版型 B | 無腳註的三欄模式 |
+| `<!-- layout: C -->` | 切換至版型 C | 三欄 + endnote 模式 |
 | `<!-- page-break -->` | 強制換頁 | 從下一頁開始接續內容 |
-| `<!-- title: ... -->` | 設定章節標題（對應 H1） | 用於目錄 |
+| `<!-- column-break -->` | 強制換欄 | 當前欄結束，跳到下一欄 |
+| `<!-- title: ... -->` | 設定章節標題（對應 H1） | 尚未實作 |
 
 ### 腳註語法
 
@@ -132,32 +157,32 @@ Markdown + HTML 註解指令
 socotaku-pub/
 ├── PLANNING.md              ← 本文件（開發規格書）
 ├── content/                 ← Markdown 稿件目錄
-│   └── sample/
-│       ├── book.md          ← 範例稿件
-│       └── chapter1.md
-├── templates/               ← 版型 CSS 樣式
+│   ├── 00-intro.md          ← 範例稿件（Layout A）
+│   └── 01-chapter.md        ← 範例稿件（Layout B → C）
+├── templates/               ← 版型 HTML + CSS
 │   ├── base.css             ← 共同樣式（字型、行距、顏色）
-│   ├── layout-a.css         ← 版型 A：二欄+腳註
-│   └── layout-b.css         ← 版型 B：三欄
+│   ├── layout-a.html        ← 版型 A：二欄+腳註（DOM + 內嵌樣式）
+│   ├── layout-b.html        ← 版型 B：三欄
+│   └── layout-c.html        ← 版型 C：三欄 + Endnote
 ├── src/
 │   ├── index.ts             ← CLI 入口
 │   ├── parser/              ← Markdown 解析模組
 │   │   ├── index.ts         ← parse() 主函式
 │   │   └── directives.ts    ← 解析 HTML 註解指令
-│   ├── types/               ← 共用型別定義
-│   │   ├── layout.ts        ← 版型、欄位、頁面型別
-│   │   ├── content.ts       ← ContentNode、Directive 型別
-│   │   └── index.ts         ← 匯出
-│   ├── composer/            ← 分頁引擎
-│   │   ├── index.ts         ← PageComposer class
-│   │   ├── page-builder.ts  ← 單頁組成邏輯
-│   │   └── measurer.ts      ← 隱藏 DOM 量高度
+│   ├── types/
+│   │   └── index.ts         ← 共用型別定義
+│   ├── composer/            ← 分頁引擎（瀏覽器端執行）
+│   │   ├── index.ts         ← BrowserComposer class（Puppeteer orchestrator）
+│   │   ├── browser-compose.ts  ← 排版演算法（Bun.build → IIFE，注入瀏覽器）
+│   │   └── page-builder.ts  ← 單頁組成邏輯（Node.js 端輔助）
 │   ├── renderer/            ← 渲染與輸出
-│   │   ├── index.ts         ← render() 主函式
+│   │   ├── index.ts         ← 匯出
 │   │   ├── page-html.ts     ← 單頁→HTML template 拼接
-│   │   └── pdf.ts           ← Playwright → PDF
-│   └── server/              ← 開發預覽伺服器（未來）
-│       └── index.ts
+│   │   └── pdf.ts           ← Puppeteer → PDF
+│   ├── templates/
+│   │   └── loader.ts        ← 載入 templates/*.html、base.css
+│   └── browser/
+│       └── puppeteer.ts     ← Puppeteer launch/viewport/font 工具
 ├── output/                  ← PDF 輸出目錄
 ├── package.json
 ├── tsconfig.json
@@ -186,12 +211,13 @@ socotaku-pub/
 ContentNode 型別：
 ```typescript
 type ContentNode =
-  | { type: 'paragraph'; text: string }
+  | { type: 'paragraph'; text: string; continues?: boolean; fnRefs?: FnRef[] }
   | { type: 'heading'; level: number; text: string }
-  | { type: 'footnote_ref'; id: string }          // [^fn1]
-  | { type: 'footnote_def'; id: string; text: string }  // [^fn1]: ...
+  | { type: 'footnote_ref'; id: string; displayId?: string }
+  | { type: 'footnote_def'; id: string; text: string; displayId?: string }
   | { type: 'page_break' }
-  | { type: 'layout_switch'; layout: 'A' | 'B' }
+  | { type: 'column_break' }
+  | { type: 'layout_switch'; layout: 'A' | 'B' | 'C' }
 ```
 
 ### 2. Types（`src/types/`）
@@ -199,22 +225,21 @@ type ContentNode =
 共用型別定義：
 
 ```typescript
-// 欄位配置
+// 欄位配置（無 heightPt/afterGapPt，由模板 CSS + PageDimensions 控制）
 type ColumnDef = {
   id: string
   type: 'body' | 'footnote'
-  heightPt: number
-  afterGapPt: number        // 與下一欄的間距
 }
 
 // 版型
 type LayoutDef = {
-  id: 'A' | 'B'
+  id: LayoutId
   columns: ColumnDef[]
 }
 
 // 單頁
 type Page = {
+  layoutId: LayoutId
   columns: PageColumn[]
 }
 
@@ -222,76 +247,91 @@ type PageColumn = {
   def: ColumnDef
   nodes: ContentNode[]
 }
+
+// 腳註參照
+type FnRef = {
+  refId: string     // 加檔案前綴避免衝突
+  displayId: string // 原始 id，用於顯示
+}
 ```
 
 ### 3. Composer（`src/composer/`）
 
-**PageComposer**：核心分頁引擎
+分頁引擎在 Puppeteer 瀏覽器內執行。
 
 ```
-輸入：ContentNode[] + LayoutDef
-輸出：Page[]
+Node.js 端：BrowserComposer class
+  - create() → 啟動瀏覽器、Bun.build(browser-compose.ts)、注入頁面
+  - compose() → page.evaluate() 呼叫瀏覽器端的排版函式
+  - close() → 關閉瀏覽器
+
+瀏覽器端：browser-compose.ts
+  - 被 Bun.build 打包為 IIFE，掛在 window.browserCompose
+  - 直接操作真實 DOM 量測文字高度與 overflow
+  - 貪婪演算法：逐節點填入當前欄，overflow 則 splitAt()
 ```
 
 演算法：
 ```
 for each node in ContentNode[]:
-  if node 是 page_break → 建立新頁面
-  if node 是 layout_switch → 更新 LayoutDef
+  if node 是 page_break → 完成當前頁 → 建立新頁面
+  if node 是 column_break → 強制換欄
+  if node 是 layout_switch → 更新 currentTemplate
   if node 是 body 節點（paragraph, heading）:
-    找當前頁面哪個 body 欄還有空間
-    if 欄空間足夠 → 放入該欄
-    else → 量測 node 高度，二分切割，前半塞入，後半留到下一欄/下一頁
+    嘗試放入當前欄（append DOM → 檢查 overflow）
+    if overflow → tryPlaceAndSplit():
+      二分搜尋 + DOM 操作找到切割點
+      前半放入當前欄，後半加入 queue 處理
+      若所有欄已滿 → 換頁
   if node 是 footnote_ref:
-    記錄到當前頁的腳註收集區
+    記錄 refId → refsPerPage 收集區
   if node 是 footnote_def:
-    暫存，頁面結束時填入頁尾
+    暫存於 defMap
+頁面結束時 → placeFootnotes() 填入腳註欄
 ```
 
-**Measurer**：隱藏 DOM 量高度
+**splitAt()**：直接在 DOM 中進行二分搜尋。
 
 ```typescript
-class Measurer {
-  private container: HTMLElement  // 隱藏 div
-
-  // 量測一段文字在指定欄位佔多少高度
-  measure(text: string, columnHeight: number): number
-  // 二分搜尋找到從哪裡切
-  splitAt(text: string, maxHeight: number): [string, string]
+function splitAt(text: string, colEl: HTMLElement, nodeType: string, node?: any): [string, string] {
+  // 在 colEl 中建臨時元素
+  // 每次插入前半段文字 → 檢查 overflow
+  // 二分逼近直到找到最長不溢出長度
+  // 移除臨時元素
+  return [firstPart, remainder]
 }
 ```
 
 注意事項：
-- 必須等字型載入 `document.fonts.ready`
-- 使用 `writing-mode: vertical-rl` 模擬直排
-- 每個欄位獨立測量（不同字級 11pt vs 9pt、不同樣式）
+- 使用 `writing-mode: vertical-rl` 真實直排
+- 等 `document.fonts.ready` 後才開始
+- 每個欄位的 font-size 由模板 CSS 決定
+- 支援孤兒行預防（保留至少 2 行在當前頁）
 
 ### 4. Renderer（`src/renderer/`）
 
-Page → HTML → PDF：
+Page → HTML → PDF（獨立函式）：
 
 ```typescript
-class Renderer {
-  // Page[] → 拼接成完整的 HTML
-  renderToHtml(pages: Page[], layout: LayoutDef): string
-  
-  // HTML → PDF（Playwright）
-  async renderToPdf(html: string, outputPath: string): Promise<void>
-}
+// Page[] → 拼接成完整的 HTML
+function buildPageHtml(pages: Page[], dimensions: PageDimensions, cssContent?: string): { html: string }
+
+// HTML → PDF（Puppeteer）
+async function renderPdf(html: string, outputPath: string, dimensions: PageDimensions): Promise<void>
 ```
 
-**page-html.ts** — 單頁 HTML 模板：
-- 從 `templates/` 載入對應的 CSS
-- 每頁用 `@page` 設定尺寸
+**page-html.ts**：
+- 從 `templates/` 載入版型 HTML（含嵌入 `<style>`）
+- 每頁獨立 `<div class="page">`，交替 left/right margins
 - 直排 `writing-mode: vertical-rl`
-- column 區塊使用 flexbox/grid 定位
-- 頁碼左右交錯
+- 腳註標記渲染為 SVG circle badges（inline SVG）
+- 頁碼 `data-page-number` 離地 72pt
 
 **pdf.ts**：
-- Playwright 啟動 headless Chromium
-- 載入 HTML，設定列印參數
-- `page.pdf()` 輸出 PDF
-- 字型需內嵌或指定
+- Puppeteer 啟動 headless Chromium
+- `page.setContent()` 載入 HTML
+- `page.pdf()` 輸出 PDF（尺寸參數由 `PageDimensions` 計算）
+- 字型依賴系統安裝或 `@font-face`
 
 ---
 
@@ -299,31 +339,29 @@ class Renderer {
 
 | 工具 | 用途 |
 |------|------|
-| **Bun** | Runtime + 套件管理 + 測試執行 |
+| **Bun** | Runtime + 套件管理 + 打包（`Bun.build`） |
 | **TypeScript** | 開發語言 |
-| **Playwright** | Headless Chromium → PDF 輸出 |
-| **Vivliostyle Core** | CSS 排版引擎（處理 @page、直排） |
-| **remark** | Markdown 解析 |
+| **Puppeteer** | Headless Chromium → PDF 輸出 |
+| **remark** + **remark-gfm** | Markdown 解析（含 GFM 腳註） |
 | **TypeScript types** | 專案型別定義 |
 
 ---
 
 ## 開發階段
 
-### Phase 1 — 核心管道（本階段）
+### Phase 1 — 核心管道（本階段完成）
 
 ```
 Markdown → Parser → Composer → Renderer → PDF
 ```
 
-1. 建立專案結構與套件
-2. 實作 Parser（Markdown + `<!-- -->` 指令解析）
-3. 實作型別定義（Layout、ContentNode、Page）
-4. 實作 Measurer（隱藏 DOM 量高度）
-5. 實作 PageComposer（分頁演算法）
-6. 實作 Renderer（HTML 模板 + Playwright PDF）
-7. 整合 CLI 指令
-8. 測試：範例稿件產出 PDF
+1. ✅ 建立專案結構與套件
+2. ✅ 實作 Parser（Markdown + `<!-- -->` 指令解析）
+3. ✅ 實作型別定義（Layout、ContentNode、Page、FnRef）
+4. ✅ 實作 Composer（瀏覽器端分頁演算法）
+5. ✅ 實作 Renderer（HTML 模板 + Puppeteer PDF）
+6. ✅ 整合 CLI 指令
+7. ⬜ 測試：範例稿件產出 PDF
 
 ### Phase 2 — 預覽與反覆
 - 開發預覽伺服器（即時看到排版結果）
@@ -341,14 +379,12 @@ Markdown → Parser → Composer → Renderer → PDF
 ## 開發指令
 
 ```bash
-bun init                    # 初始化專案（已執行則跳過）
-bun add playwright          # PDF 輸出
-bun add remark remark-html  # Markdown 解析
-bun add @vivliostyle/core   # CSS 排版引擎
-bun add --dev typescript @types/bun
-
+bun install                 # 安裝相依套件
 bun run src/index.ts        # 執行
 bun run --watch src/index.ts # 開發模式
+
+bun add puppeteer           # 新增 Puppeteer
+bun add remark remark-gfm   # 新增 Markdown 解析
 ```
 
 ---
