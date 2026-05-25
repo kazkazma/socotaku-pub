@@ -139,10 +139,14 @@ export type PageColumn = {
   nodes: ContentNode[];
 };
 
+/** 頁面 slot：保留 .page direct child 的原始順序 */
+export type PageSlot =
+  | { type: "column"; index: number }
+  | { type: "static"; html: string };
+
 /** 單一頁面：所採用的版面 ID + 各欄內容 */
 export type Page = {
   layoutId: LayoutId;
   columns: PageColumn[];
-  /** 頁面內非 .page-content 的靜態子節點 HTML（如版權區、標籤） */
-  staticHtml?: string[];
+  slots?: PageSlot[];
 };

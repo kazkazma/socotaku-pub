@@ -116,6 +116,7 @@ export class BrowserComposer {
         initialLayout,
         templates: this.registry.templates,
         dimensions: this.dimensions,
+
       },
     )
 

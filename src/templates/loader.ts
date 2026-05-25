@@ -1,12 +1,20 @@
 import { join } from "path";
+import { Glob } from "bun";
 import type {
   TemplateRegistry,
   TemplatePackage,
   PageDimensions,
 } from "../types";
 
-/** 版面樣板檔案列表（依此順序載入） */
-const LAYOUT_FILES = ["layout-a.html", "layout-b.html", "layout-c.html"];
+/** 動態掃描 templates/ 下所有 layout-*.html */
+async function findLayoutFiles(templateDir: string): Promise<string[]> {
+  const glob = new Glob("layout-*.html");
+  const files: string[] = [];
+  for await (const file of glob.scan(templateDir)) {
+    files.push(file);
+  }
+  return files.sort();
+}
 
 /**
  * 從 base.css 的 :root 變數中解析頁面尺寸與邊距
@@ -53,15 +61,15 @@ function stripStyleTag(html: string): string {
   return html.replace(/<style>[\s\S]*?<\/style>/g, "").trim();
 }
 
-/** 從 HTML 的 data-layout 屬性萃取版面 ID */
-function extractLayoutId(html: string): string {
-  return html.match(/data-layout="([^"]+)"/)?.[1] ?? "";
+/** 從檔名取得版面 ID（例如 "layout-a"） */
+function layoutIdFromFilename(filePath: string): string {
+  return filePath.replace(/\.html$/, "")
 }
 
 /**
  * 載入所有樣板：
  * - base.css → 全域 CSS + 尺寸變數
- * - layout-a/b/c.html → 各版面 HTML 結構 + 各自 CSS
+ * - layout-*.html → 動態掃描各版面 HTML 結構 + 各自 CSS
  * - 合併為 TemplateRegistry，並回解析出的 PageDimensions
  */
 export async function loadTemplates(
@@ -72,20 +80,22 @@ export async function loadTemplates(
   const templates: Record<string, TemplatePackage> = {};
   const allCssParts: string[] = [baseCss];
 
-  for (const file of LAYOUT_FILES) {
-    const raw = await Bun.file(join(templateDir, file)).text();
+  const layoutFiles = await findLayoutFiles(templateDir)
 
-    const css = extractCss(raw);
-    const pageHtml = stripStyleTag(raw);
-    const id = extractLayoutId(raw);
+  for (const file of layoutFiles) {
+    const raw = await Bun.file(join(templateDir, file)).text()
+
+    const css = extractCss(raw)
+    const pageHtml = stripStyleTag(raw)
+    const id = layoutIdFromFilename(file)
 
     templates[id] = {
       id,
       pageHtml,
       css,
-    };
+    }
 
-    allCssParts.push(css);
+    allCssParts.push(css)
   }
 
   const combinedCss = allCssParts.join("\n");

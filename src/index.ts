@@ -68,7 +68,7 @@ async function main() {
   let pages: any[]
   try {
     console.log('Composing pages...')
-    pages = await composer.compose(allNodes, 'A')
+    pages = await composer.compose(allNodes, 'layout-a')
     console.log(`Generated ${pages.length} page(s)`)
   } finally {
     await composer.close()

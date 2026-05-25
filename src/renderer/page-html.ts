@@ -30,6 +30,21 @@ ${pageDivs.join('\n')}
   return { html }
 }
 
+/** 依 slots 順序渲染 page 的主體 HTML（保留 static 在 template 中的位置） */
+function renderSlots(page: Page): string {
+  if (!page.slots || page.slots.length === 0) {
+    return page.columns.map((col) => renderColumn(col)).join('\n')
+  }
+
+  return page.slots
+    .map((slot) => {
+      if (slot.type === 'static') return slot.html
+      const col = page.columns[slot.index]
+      return col ? renderColumn(col) : ''
+    })
+    .join('\n')
+}
+
 /** 將單一 Page 渲染為 HTML 字串，含 page-number 與邊距設定 */
 function renderPage(
   page: Page,
@@ -45,10 +60,6 @@ function renderPage(
   const marginRight = isLeft
     ? dim.marginInnerPt
     : dim.marginOuterPt
-
-  const columnsHtml = page.columns
-    .map((col) => renderColumn(col))
-    .join('\n')
 
   const pageStyle = [
     `width:${dim.widthPt}pt`,
@@ -66,11 +77,10 @@ function renderPage(
     isLeft ? 'left:32pt' : 'right:32pt',
   ].join(';')
 
-  const staticHtml = page.staticHtml?.join('\n') ?? ''
+  const bodyHtml = renderSlots(page)
 
-  return `<div class="page layout-${layoutId.toLowerCase()}" style="${pageStyle}">
-<div class="page-content">${columnsHtml}</div>
-${staticHtml}
+  return `<div class="page ${layoutId}" style="${pageStyle}">
+${bodyHtml}
 <span class="page-number" style="${pageNumStyle}">${pageNum}</span>
 </div>`
 }

@@ -1,5 +1,5 @@
 <style>
-.layout-a .page-content {
+.layout-a .page {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -17,10 +17,8 @@
   margin-top: 44pt;
 }
 </style>
-<div class="page layout-a" data-layout="A">
-  <div class="page-content" data-slot="body-flow">
-    <div class="column body top" data-column="top" data-col-type="body"></div>
-    <div class="column body middle" data-column="middle" data-col-type="body"></div>
-    <div class="column footnote bottom" data-column="bottom" data-col-type="footnote"></div>
-  </div>
+<div class="page layout-a">
+  <div class="column body top" data-column-kind="body" data-column-id="top"></div>
+  <div class="column body middle" data-column-kind="body" data-column-id="middle"></div>
+  <div class="column footnote bottom" data-column-kind="footnote" data-column-id="bottom"></div>
 </div>

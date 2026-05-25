@@ -1,7 +1,7 @@
 import { type ContentNode } from '../types'
 
-// <!-- layout: A|B|C --> 切換版面
-const LAYOUT_RE = /<!--\s*layout\s*:\s*(A|B|C)\s*-->/i
+// <!-- layout: layout-id --> 切換版面（值對應 templates/*.html 的檔名 stem）
+const LAYOUT_RE = /<!--\s*layout\s*:\s*([a-zA-Z][\w-]*)\s*-->/i
 // <!-- page-break --> 強制分頁
 const PAGE_BREAK_RE = /<!--\s*page-break\s*-->/i
 // <!-- column-break --> 強制分欄
@@ -17,7 +17,7 @@ export function detectDirective(html: string): ContentNode | null {
     if (!layout) return null
     return {
       type: 'layout_switch',
-      layout: layout.toUpperCase() as 'A' | 'B' | 'C',
+      layout,
     }
   }
 
