@@ -84,6 +84,7 @@ html, body {
   margin: 0;
   margin-block-end: var(--margin-block-end-body);
   text-align: justify;
+  text-justify: inter-word;
 }
 
 .column .continues {
@@ -97,6 +98,7 @@ html, body {
   letter-spacing: var(--letter-spacing-heading);
   margin-block-end: var(--margin-block-end-heading);
   text-align: justify;
+  text-justify: inter-word;
   text-indent: 0;
 }
 
@@ -111,7 +113,9 @@ html, body {
   letter-spacing: var(--letter-spacing-footnote);
   margin-block-end: var(--margin-block-end-footnote);
   text-align: justify;
+  text-justify: inter-character;
   text-indent: 0;
+  word-break: break-all;
 }
 
 .column .endnote-text {
@@ -122,7 +126,9 @@ html, body {
   letter-spacing: var(--letter-spacing-endnote);
   margin-block-end: var(--margin-block-end-endnote);
   text-align: justify;
+  text-justify: inter-character;
   text-indent: 0;
+  word-break: break-all;
 }
 
 .quote {
