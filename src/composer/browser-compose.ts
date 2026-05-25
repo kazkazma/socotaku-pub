@@ -15,13 +15,6 @@
   const pageEls: HTMLElement[] = []
   const defMap = new Map<string, string>()
   const refsPerPage = new Map<number, Array<{ refId: string; displayId: string }>>()
-  // 預先建立 displayId → refId 查表（從所有 footnote_ref 節點）
-  const fnRefMap = new Map<string, string>()
-  for (const node of nodes) {
-    if (node.type === 'footnote_ref') {
-      fnRefMap.set(node.displayId || node.id, node.id)
-    }
-  }
   let currentTemplate = templates[initialLayout]
   let pageEl = buildPageDOM(currentTemplate, composeArea)
   let pageData = createPageData(pageEl)
@@ -104,12 +97,12 @@
   }
 
   // 從文字中掃描註腳引用標記 [n]，記錄到 refsPerPage
-  function recordFnRefsFromText(text: string, pageIdx: number): void {
+  function recordFnRefsFromText(text: string, pageIdx: number, fnRefs?: any[]): void {
     if (!text) return
     const matches = text.matchAll(/\[(\d+)\]/g)
     for (const match of matches) {
       const displayId = match[1]!
-      const refId = fnRefMap.get(displayId)
+      const refId = fnRefs?.find((r: any) => r.displayId === displayId)?.refId
       if (refId) {
         if (!refsPerPage.has(pageIdx)) refsPerPage.set(pageIdx, [])
         const existing = refsPerPage.get(pageIdx)!
@@ -210,7 +203,7 @@
         pageData._nextBodyCol = bci
         const colIdx = getColumnIndex(pageEl, colEl)
         pageData.columns[colIdx].nodes.push(node)
-        recordFnRefsFromText(text, pages.length)
+        recordFnRefsFromText(text, pages.length, node.fnRefs)
         return { placed: true, remainder: null }
       }
 
@@ -224,7 +217,7 @@
         colEl.appendChild(splitEl)
         const colIdx = getColumnIndex(pageEl, colEl)
         pageData.columns[colIdx].nodes.push({ ...node, text: first, continues: nodeType === 'paragraph' })
-        recordFnRefsFromText(first, pages.length)
+        recordFnRefsFromText(first, pages.length, node.fnRefs)
         return { placed: true, remainder: second || null }
       }
       // 連前綴都放不下 → 嘗試下一欄
@@ -236,7 +229,7 @@
       fallbackCol.el.appendChild(el)
       pageData._nextBodyCol = fallbackCol.idx
       pageData.columns[fallbackCol.idx].nodes.push(node)
-      recordFnRefsFromText(text, pages.length)
+      recordFnRefsFromText(text, pages.length, node.fnRefs)
       return { placed: true, remainder: null }
     }
 

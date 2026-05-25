@@ -103,7 +103,7 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
   }
 
   if (textBuffer.trim()) {
-    nodes.push({ type: 'paragraph', text: textBuffer.trim() })
+    nodes.push({ type: 'paragraph', text: textBuffer.trim(), refIds })
   }
   // 在段落之後放入對應的 footnote_ref（非行內嵌入）
   for (const id of refIds) {

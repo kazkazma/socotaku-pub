@@ -46,6 +46,14 @@ async function main() {
         node.displayId = node.id
         node.id = `${fi}:${node.id}`
       }
+      // 段落的 refIds 也要前綴，轉為 fnRefs
+      if (node.type === 'paragraph' && (node as any).refIds) {
+        const refIds: string[] = (node as any).refIds
+        node.fnRefs = refIds.map((id: string) => ({
+          refId: `${fi}:${id}`,
+          displayId: id,
+        }))
+      }
     }
     allNodes.push(...result.nodes)
   }
@@ -100,3 +108,5 @@ main().catch((err) => {
   console.error('Error:', err)
   process.exit(1)
 })
+
+
