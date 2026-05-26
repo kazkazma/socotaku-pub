@@ -1,4 +1,4 @@
-<!-- layout: A -->
+<!-- layout: layout-a -->
 
 ## 認識 socotaku-pub
 
