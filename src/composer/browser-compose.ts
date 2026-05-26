@@ -98,6 +98,26 @@
     return pd.columns.every((c: any) => c.nodes.length === 0);
   }
 
+  // HTML 跳脫（& < > " '）
+  function escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // 建立註腳引用標記的 SVG HTML
+  function renderFnRefHtml(id: string): string {
+    return `<span class="footnote-ref"><svg viewBox="0 0 20 20" width="8pt" height="8pt" style="writing-mode:horizontal-tb"><circle cx="10" cy="10" r="9" fill="currentColor"/><text x="10" y="13.5" text-anchor="middle" font-size="11" fill="white">${id}</text></svg></span>`;
+  }
+
+  // 將文字中的 [n] 數字標記替換為 SVG 註腳符號
+  function replaceFnRefs(text: string): string {
+    return escapeHtml(text).replace(/\[(\d+)\]/g, (_, id) => renderFnRefHtml(id));
+  }
+
   // 為節點建立對應的 DOM 元素
   function createElementForNode(
     nodeType: string,
@@ -105,8 +125,13 @@
     node?: any,
   ): HTMLElement {
     const el = document.createElement(nodeType === "heading" ? "h2" : "p");
-    el.textContent = text;
+    if (/\[\d+\]/.test(text) && nodeType === "paragraph") {
+      el.innerHTML = replaceFnRefs(text);
+    } else {
+      el.textContent = text;
+    }
     if (node?.isEndnote) el.classList.add("endnote-text");
+    if (node?.continues) el.classList.add("continues");
 
     return el;
   }
@@ -182,7 +207,9 @@
         continue;
       }
 
-      const midEl = createElementForNode(nodeType, text.slice(0, mid), node);
+      const isPrefix = mid < text.length;
+      const midNode = nodeType === "paragraph" && isPrefix ? { ...node, continues: true } : node;
+      const midEl = createElementForNode(nodeType, text.slice(0, mid), midNode);
       colEl.appendChild(midEl);
       if (!columnOverflows(colEl)) {
         best = mid;
@@ -260,14 +287,15 @@
       const [first, second] = splitAt(text, colEl, nodeType, node);
       if (first) {
         pageData._nextBodyCol = bci;
-        const splitEl = createElementForNode(nodeType, first, node);
-        colEl.appendChild(splitEl);
-        const colIdx = getColumnIndex(pageEl, colEl);
-        pageData.columns[colIdx].nodes.push({
+        const splitNode = {
           ...node,
           text: first,
           continues: nodeType === "paragraph",
-        });
+        };
+        const splitEl = createElementForNode(nodeType, first, splitNode);
+        colEl.appendChild(splitEl);
+        const colIdx = getColumnIndex(pageEl, colEl);
+        pageData.columns[colIdx].nodes.push(splitNode);
         recordFnRefsFromText(first, pages.length, node.fnRefs);
         return { placed: true, remainder: second || null };
       }

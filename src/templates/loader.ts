@@ -34,7 +34,7 @@ function parseCssDimensions(css: string): PageDimensions {
 
   const parsePt = (v: string): number => parseFloat(v.replace(/pt$/, ""));
   const parseMm = (v: string): number => parseFloat(v.replace(/mm$/, ""));
-  const mmToPt = (mm: number): number => Math.round(mm / 0.3514); // JIS: 1pt = 0.3514mm
+  const mmToPt = (mm: number): number => mm * 72 / 25.4;
 
   const widthMm = parseMm(getVal("page-width"));
   const heightMm = parseMm(getVal("page-height"));
