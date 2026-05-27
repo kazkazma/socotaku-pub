@@ -6,6 +6,8 @@ import { renderPdf } from './renderer/pdf'
 import { loadTemplates } from './templates/loader'
 import { resolve, join } from 'path'
 
+const TARGET_DPI = 300
+
 /**
  * 主流程：讀取 Markdown → 剖析 → 排版 → 輸出 HTML → 輸出 PDF
  */
@@ -99,7 +101,7 @@ async function main() {
   // ── 輸出 PDF（自行管理 browser lifecycle） ──
   const outputPath = join(outputDir, 'output.pdf')
   console.log('Rendering PDF...')
-  await renderPdf(fullHtml, outputPath, dimensions)
+  await renderPdf(fullHtml, outputPath, dimensions, TARGET_DPI / 96)
 
   console.log(`Done: ${outputPath}`)
 }

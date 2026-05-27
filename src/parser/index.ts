@@ -119,6 +119,9 @@ function extractText(node: any): string {
   if (node.type === 'text') {
     return node.value || ''
   }
+  if (node.type === 'html' && /^<br\s*\/?>$/i.test(node.value)) {
+    return '\n'
+  }
   if (node.type === 'footnoteReference') {
     return ''
   }

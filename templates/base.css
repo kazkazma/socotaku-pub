@@ -24,7 +24,7 @@
   --font-size-body: 11pt;
   --font-size-footnote: 9pt;
   --font-size-endnote: 9pt;
-  --font-size-h2: 11pt;
+  --font-size-heading: 11pt;
   --line-height-body: 20.9pt;
   --line-height-heading: 20.9pt;
   --line-height-footnote: 14.4pt;
@@ -92,15 +92,20 @@ html, body {
   margin-block-end: 0;
 }
 
-.column h2 {
-  font-size: var(--font-size-h2);
+.column h1 {
+  font-size: var(--font-size-heading);
   font-weight: 700;
   line-height: var(--line-height-heading);
   letter-spacing: var(--letter-spacing-heading);
   margin-block-end: var(--margin-block-end-heading);
-  text-align: justify;
-  text-justify: inter-ideograph;
-  text-indent: 0;
+}
+
+.column h2 {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-heading);
+  margin-block-end: var(--margin-block-end-heading);
 }
 
 .column .footnote-ref {

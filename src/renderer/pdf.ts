@@ -9,6 +9,7 @@ export async function renderPdf(
   html: string,
   outputPath: string,
   dimensions: PageDimensions,
+  scale = 1,
 ): Promise<void> {
   const browser = await launchHeadlessBrowser()
   try {
@@ -23,6 +24,7 @@ export async function renderPdf(
       width: mmToIn(dimensions.widthMm),
       height: mmToIn(dimensions.heightMm),
       printBackground: true,
+      scale,
       // 邊距已內嵌在 HTML 中（page padding）
       margin: { top: '0', right: '0', bottom: '0', left: '0' },
     })

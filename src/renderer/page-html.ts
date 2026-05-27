@@ -91,7 +91,8 @@ function renderColumn(col: any): string {
   const content = col.nodes
     .map((node: any) => {
       if (node.type === 'heading') {
-        return `<h2>${escapeHtml(node.text || '')}</h2>`
+        const tag = `h${Math.min(node.level || 2, 6)}`
+        return `<${tag}>${escapeHtml(node.text || '').replace(/\n/g, '<br>')}</${tag}>`
       }
       const html = replaceFnMarkers(escapeHtml(node.text || '').replace(/\n/g, '<br>'), isBody)
       const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : ''].filter(Boolean)

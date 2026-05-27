@@ -126,10 +126,10 @@
     text: string,
     node?: any,
   ): HTMLElement {
-    const el = document.createElement(nodeType === "heading" ? "h2" : "p");
+    const el = document.createElement(nodeType === "heading" ? `h${Math.min(node?.level || 2, 6)}` : "p");
     if (/\[\d+\]/.test(text) && nodeType === "paragraph") {
       el.innerHTML = replaceFnRefs(text);
-    } else if (text.includes('\n') && nodeType === "paragraph") {
+    } else if (text.includes('\n')) {
       el.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
     } else {
       el.textContent = text;
