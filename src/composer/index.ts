@@ -99,9 +99,22 @@ export class BrowserComposer {
    */
   async compose(
     nodes: ContentNode[],
-    initialLayout: LayoutId = 'A',
+    initialLayout?: LayoutId,
   ): Promise<any[]> {
     if (!this.initialized) throw new Error('BrowserComposer not initialized')
+
+    if (nodes.length === 0) return []
+
+    if (!initialLayout) {
+      if (nodes[0]?.type === 'layout_switch') {
+        initialLayout = (nodes[0] as any).layout
+        nodes = nodes.slice(1)
+      } else {
+        const keys = Object.keys(this.registry.templates)
+        if (keys.length === 0) throw new Error('No templates loaded')
+        initialLayout = keys[0] as LayoutId
+      }
+    }
 
     const pages = await this.page.evaluate(
       (params) => {
