@@ -113,9 +113,11 @@
     return `<span class="footnote-ref"><svg viewBox="0 0 20 20" width="8pt" height="8pt" style="writing-mode:horizontal-tb"><circle cx="10" cy="10" r="9" fill="currentColor"/><text x="10" y="13.5" text-anchor="middle" font-size="11" fill="white">${id}</text></svg></span>`;
   }
 
-  // 將文字中的 [n] 數字標記替換為 SVG 註腳符號
+  // 將文字中的 [n] 數字標記替換為 SVG 註腳符號，並將 \n 轉為 <br>
   function replaceFnRefs(text: string): string {
-    return escapeHtml(text).replace(/\[(\d+)\]/g, (_, id) => renderFnRefHtml(id));
+    return escapeHtml(text)
+      .replace(/\n/g, '<br>')
+      .replace(/\[(\d+)\]/g, (_, id) => renderFnRefHtml(id));
   }
 
   // 為節點建立對應的 DOM 元素
@@ -127,6 +129,8 @@
     const el = document.createElement(nodeType === "heading" ? "h2" : "p");
     if (/\[\d+\]/.test(text) && nodeType === "paragraph") {
       el.innerHTML = replaceFnRefs(text);
+    } else if (text.includes('\n') && nodeType === "paragraph") {
+      el.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
     } else {
       el.textContent = text;
     }

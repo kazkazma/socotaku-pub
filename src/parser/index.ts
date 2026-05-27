@@ -97,6 +97,8 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
     } else if (child.type === 'footnoteReference') {
       textBuffer += `[${child.identifier}]`
       refIds.push(child.identifier)
+    } else if (child.type === 'html' && /^<br\s*\/?>$/i.test(child.value)) {
+      textBuffer += '\n'
     } else {
       textBuffer += extractText(child)
     }

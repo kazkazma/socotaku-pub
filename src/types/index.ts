@@ -64,6 +64,7 @@ type ParagraphNode = BaseNode & {
   type: "paragraph";
   text: string; // 段落文字
   continues?: boolean; // 自動分欄/分頁拆段後，此片段後方仍接續同一原始段落
+  refIds?: string[]; // 原始註腳識別碼（parser 階段用）
   fnRefs?: FnRef[]; // 段落中的註腳引用（refId → displayId）
 };
 
