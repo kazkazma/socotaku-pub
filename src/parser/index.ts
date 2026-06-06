@@ -3,6 +3,14 @@ import remarkGfm from 'remark-gfm'
 import { type ContentNode, type LayoutId } from '../types'
 import { detectDirective, isDirectiveComment } from './directives'
 
+// <!-- style:"..." --> CSS patch 註解
+const STYLE_RE = /<!--\s*style:\s*"([^"]+)"\s*-->/i
+
+/** 剖析走訪上下文 */
+type WalkContext = {
+  pendingStyle: string | null
+}
+
 /** 剖析結果：ContentNode 節點串流 */
 export type ParseResult = {
   nodes: ContentNode[]
@@ -14,19 +22,20 @@ export type ParseResult = {
  */
 export function parseMarkdown(markdown: string): ParseResult {
   const nodes: ContentNode[] = []
+  const ctx: WalkContext = { pendingStyle: null }
 
   const processor = remark().use(remarkGfm)
   const root = processor.parse(markdown)
-  walkNodes(root, nodes)
+  walkNodes(root, nodes, ctx)
 
   return { nodes }
 }
 
 /** 遞迴走訪 MDAST，將感興趣的節點轉換為 ContentNode */
-function walkNodes(node: any, nodes: ContentNode[]) {
+function walkNodes(node: any, nodes: ContentNode[], ctx: WalkContext) {
   // 段落：合併子文字節點，抽出註腳引用
   if (node.type === 'paragraph') {
-    extractParagraphChildren(node, nodes)
+    extractParagraphChildren(node, nodes, ctx)
     return
   }
 
@@ -50,21 +59,31 @@ function walkNodes(node: any, nodes: ContentNode[]) {
           const text = extractText(child)
           if (text.trim()) texts.push(text.trim())
         } else if (child.children) {
-          walkNodes(child, nodes)
+          walkNodes(child, nodes, ctx)
         }
       }
       if (texts.length > 0) {
-        nodes.push({ type: 'quote', text: texts.join('\n') })
+        const quote: any = { type: 'quote', text: texts.join('\n') }
+        if (ctx.pendingStyle) {
+          quote.style = ctx.pendingStyle
+          ctx.pendingStyle = null
+        }
+        nodes.push(quote)
       }
     }
     return
   }
 
-  // HTML 註解指令：版面切換 / 分頁 / 分欄
+  // HTML 註解指令：版面切換 / 分頁 / 分欄，以及 style patch
   if (node.type === 'html') {
     if (isDirectiveComment(node.value)) {
       const directive = detectDirective(node.value)
       if (directive) nodes.push(directive)
+    } else {
+      const styleMatch = node.value.match(STYLE_RE)
+      if (styleMatch) {
+        ctx.pendingStyle = styleMatch[1]!
+      }
     }
     return
   }
@@ -94,7 +113,7 @@ function walkNodes(node: any, nodes: ContentNode[]) {
   // 其他容器節點（如區塊引用、列表）→ 繼續遞迴
   if (node.children) {
     for (const child of node.children) {
-      walkNodes(child, nodes)
+      walkNodes(child, nodes, ctx)
     }
   }
 }
@@ -104,7 +123,7 @@ function walkNodes(node: any, nodes: ContentNode[]) {
  * - 純文字合併到 textBuffer
  * - 註腳引用在行內插入 [id] 標記，並另外產生 footnote_ref 節點
  */
-function extractParagraphChildren(node: any, nodes: ContentNode[]) {
+function extractParagraphChildren(node: any, nodes: ContentNode[], ctx: WalkContext) {
   if (!node.children || node.children.length === 0) return
 
   let textBuffer = ''
@@ -128,7 +147,12 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
   }
 
   if (textBuffer.trim()) {
-    nodes.push({ type: 'paragraph', text: textBuffer.trim(), refIds })
+    const pn: any = { type: 'paragraph', text: textBuffer.trim(), refIds }
+    if (ctx.pendingStyle) {
+      pn.style = ctx.pendingStyle
+      ctx.pendingStyle = null
+    }
+    nodes.push(pn)
   }
   // 在段落之後放入對應的 footnote_ref（非行內嵌入）
   for (const id of refIds) {

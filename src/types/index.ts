@@ -67,6 +67,7 @@ type ParagraphNode = BaseNode & {
   continues?: boolean; // 自動分欄/分頁拆段後，此片段後方仍接續同一原始段落
   refIds?: string[]; // 原始註腳識別碼（parser 階段用）
   fnRefs?: FnRef[]; // 段落中的註腳引用（refId → displayId）
+  style?: string; // CSS patch 樣式（來自 <!-- style:"..." --> 註解）
 };
 
 /** 標題節點：含文字與層級 */
@@ -81,6 +82,7 @@ type QuoteNode = BaseNode & {
   type: "quote";
   text: string;
   continues?: boolean;
+  style?: string; // CSS patch 樣式（來自 <!-- style:"..." --> 註解）
 };
 
 /** 註腳引用：標記正文中的 [n] */

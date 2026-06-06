@@ -153,6 +153,7 @@
     if (node?.isEndnote) el.classList.add("endnote-text");
     if (node?.continues) el.classList.add("continues");
     if (nodeType === "quote") el.classList.add("quote");
+    if (node?.style) el.style.cssText = node.style;
 
     return el;
   }
@@ -241,7 +242,51 @@
       colEl.removeChild(midEl);
     }
 
+    // 調整切分位置，避免破壞行內標記 (**bold** / *italic* / [n])
+    best = adjustSplitPos(text, best);
+
     return [text.slice(0, best), text.slice(best)];
+  }
+
+  // 將切分位置倒退至不成對標記之前，確保兩半格式完整
+  function adjustSplitPos(text: string, pos: number): number {
+    if (pos <= 0 || pos >= text.length) return pos;
+
+    // Bold **：跳過已配對的 **，若狀態為開啟則退回開 ** 前
+    let inBold = false;
+    let lastBoldOpen = -1;
+    for (let i = 0; i < pos; i++) {
+      if (text[i] === '*' && i + 1 < text.length && text[i + 1] === '*') {
+        inBold = !inBold;
+        if (inBold) lastBoldOpen = i;
+        i++;
+      }
+    }
+    if (inBold && lastBoldOpen >= 0) return lastBoldOpen;
+
+    // Italic *：跳過 ** 後掃單 *
+    let inItalic = false;
+    let lastItalicOpen = -1;
+    for (let i = 0; i < pos; i++) {
+      if (text[i] === '*') {
+        if (i + 1 < text.length && text[i + 1] === '*') {
+          i++;
+          continue;
+        }
+        inItalic = !inItalic;
+        if (inItalic) lastItalicOpen = i;
+      }
+    }
+    if (inItalic && lastItalicOpen >= 0) return lastItalicOpen;
+
+    // Footnote ref [n]：若 pos 落在括號中間則退回 [
+    for (let i = Math.max(0, pos - 5); i < pos; i++) {
+      if (text[i] === '[' && text.slice(i, pos).match(/^\[\d*$/) && !text.slice(i).match(/^\[\d+\]/)) {
+        return i;
+      }
+    }
+
+    return pos;
   }
 
   function tryPlaceAndSplit(

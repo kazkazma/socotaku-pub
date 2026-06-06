@@ -97,7 +97,8 @@ function renderColumn(col: any): string {
       const html = applyInlineFormatting(replaceFnMarkers(escapeHtml(node.text || '').replace(/\n/g, '<br>'), isBody))
       const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : '', node.type === 'quote' ? 'quote' : ''].filter(Boolean)
       const pCls = classes.length ? ` class="${classes.join(' ')}"` : ''
-      return `<p${pCls}>${html}</p>`
+      const styleAttr = node.style ? ` style="${node.style}"` : ''
+      return `<p${pCls}${styleAttr}>${html}</p>`
     })
     .join('\n')
 
