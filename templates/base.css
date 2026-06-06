@@ -84,7 +84,7 @@ html, body {
   margin: 0;
   margin-block-end: var(--margin-block-end-body);
   text-align: justify;
-  text-justify: inter-ideograph;
+  text-justify: inter-character;
 }
 
 .column em {
