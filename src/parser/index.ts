@@ -2,6 +2,7 @@ import { remark } from 'remark'
 import remarkGfm from 'remark-gfm'
 import { type ContentNode, type LayoutId } from '../types'
 import { detectDirective, isDirectiveComment } from './directives'
+import { resolve, dirname } from 'path'
 
 // <!-- style:"..." --> CSS patch 註解
 const STYLE_RE = /<!--\s*style:\s*"([^"]+)"\s*-->/i
@@ -9,6 +10,8 @@ const STYLE_RE = /<!--\s*style:\s*"([^"]+)"\s*-->/i
 /** 剖析走訪上下文 */
 type WalkContext = {
   pendingStyle: string | null
+  /** 當前 markdown 檔案所在目錄（用於解析圖片相對路徑） */
+  baseDir?: string
 }
 
 /** 剖析結果：ContentNode 節點串流 */
@@ -19,10 +22,12 @@ export type ParseResult = {
 /**
  * 將 Markdown 字串剖析為 ContentNode 串流，
  * 支援段落、標題、註腳、GFM 表格，以及 HTML 註解指令。
+ * @param markdown Markdown 原始內容
+ * @param filePath 可選的檔案路徑，用於解析圖片相對路徑
  */
-export function parseMarkdown(markdown: string): ParseResult {
+export function parseMarkdown(markdown: string, filePath?: string): ParseResult {
   const nodes: ContentNode[] = []
-  const ctx: WalkContext = { pendingStyle: null }
+  const ctx: WalkContext = { pendingStyle: null, baseDir: filePath ? dirname(resolve(filePath)) : undefined }
 
   const processor = remark().use(remarkGfm)
   const root = processor.parse(markdown)
@@ -105,6 +110,13 @@ function walkNodes(node: any, nodes: ContentNode[], ctx: WalkContext) {
     return
   }
 
+  // 圖片
+  if (node.type === 'image') {
+    const src = node.url ? resolveSrc(node.url, ctx.baseDir) : ''
+    nodes.push({ type: 'image', src, alt: node.alt || '' })
+    return
+  }
+
   // 水平線（忽略，不做任何事）
   if (node.type === 'thematicBreak') {
     return
@@ -129,9 +141,26 @@ function extractParagraphChildren(node: any, nodes: ContentNode[], ctx: WalkCont
   let textBuffer = ''
   const refIds: string[] = []
 
+  function flushText() {
+    if (textBuffer.trim()) {
+      const pn: any = { type: 'paragraph', text: textBuffer.trim(), refIds: [...refIds] }
+      if (ctx.pendingStyle) {
+        pn.style = ctx.pendingStyle
+        ctx.pendingStyle = null
+      }
+      nodes.push(pn)
+      textBuffer = ''
+      refIds.length = 0
+    }
+  }
+
   for (const child of node.children) {
     if (child.type === 'text') {
       textBuffer += child.value
+    } else if (child.type === 'image') {
+      flushText()
+      const src = child.url ? resolveSrc(child.url, ctx.baseDir) : ''
+      nodes.push({ type: 'image', src, alt: child.alt || '' })
     } else if (child.type === 'footnoteReference') {
       textBuffer += `[${child.identifier}]`
       refIds.push(child.identifier)
@@ -146,18 +175,23 @@ function extractParagraphChildren(node: any, nodes: ContentNode[], ctx: WalkCont
     }
   }
 
-  if (textBuffer.trim()) {
-    const pn: any = { type: 'paragraph', text: textBuffer.trim(), refIds }
-    if (ctx.pendingStyle) {
-      pn.style = ctx.pendingStyle
-      ctx.pendingStyle = null
-    }
-    nodes.push(pn)
-  }
+  flushText()
   // 在段落之後放入對應的 footnote_ref（非行內嵌入）
   for (const id of refIds) {
     nodes.push({ type: 'footnote_ref', id })
   }
+}
+
+/** 解析圖片來源路徑：相對路徑轉為絕對路徑 */
+function resolveSrc(url: string, baseDir?: string): string {
+  if (!baseDir || url.startsWith('/') || /^[a-zA-Z]:\\/.test(url) || /^[a-zA-Z]:\//.test(url)) {
+    return url
+  }
+  // 協議絕對路徑（http://, https://, data:）保持不變
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) {
+    return url
+  }
+  return resolve(baseDir, url)
 }
 
 /** 遞迴萃取節點及其子節點的全部純文字 */

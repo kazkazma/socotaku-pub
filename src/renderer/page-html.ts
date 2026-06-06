@@ -94,6 +94,12 @@ function renderColumn(col: any): string {
         const tag = `h${Math.min(node.level || 2, 6)}`
         return `<${tag}>${escapeHtml(node.text || '').replace(/\n/g, '<br>')}</${tag}>`
       }
+      if (node.type === 'image') {
+        if (node.src) {
+          return `<div class="pic-wrapper"><img src="${node.src}" alt="${escapeHtml(node.alt || '')}" class="pic-image"></div>`
+        }
+        return ''
+      }
       const html = applyInlineFormatting(replaceFnMarkers(escapeHtml(node.text || '').replace(/\n/g, '<br>'), isBody))
       const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : '', node.type === 'quote' ? 'quote' : ''].filter(Boolean)
       const pCls = classes.length ? ` class="${classes.join(' ')}"` : ''

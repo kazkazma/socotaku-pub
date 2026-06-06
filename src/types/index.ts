@@ -18,8 +18,8 @@ export type PageDimensions = {
 // 2. 欄位與版面定義
 // ============================================================
 
-/** 欄位類型：正文欄或註腳欄 */
-export type ColumnType = "body" | "footnote";
+/** 欄位類型：正文欄、圖片欄或註腳欄 */
+export type ColumnType = "body" | "pic" | "footnote";
 
 /** 欄位定義：識別 ID 與類型 */
 export type ColumnDef = {
@@ -45,6 +45,7 @@ export type ContentType =
   | "paragraph"       // 段落
   | "heading"         // 標題
   | "quote"           // 引文（blockquote）
+  | "image"           // 圖片
   | "footnote_ref"    // 註腳引用標記（正文中的 [n]）
   | "footnote_def"    // 註腳定義內容
   | "page_break"      // 分頁指令
@@ -75,6 +76,13 @@ type HeadingNode = BaseNode & {
   type: "heading";
   text: string;   // 標題文字
   level: number;  // 標題層級（1-6）
+};
+
+/** 圖片節點 */
+type ImageNode = BaseNode & {
+  type: "image";
+  src: string;   // 圖片路徑（絕對路徑，composer 階段轉為 data URI）
+  alt?: string;  // alt 文字
 };
 
 /** 引文節點：blockquote 內容 */
@@ -116,6 +124,7 @@ type LayoutSwitchNode = BaseNode & {
 export type ContentNode =
   | ParagraphNode
   | HeadingNode
+  | ImageNode
   | QuoteNode
   | FootnoteRefNode
   | FootnoteDefNode

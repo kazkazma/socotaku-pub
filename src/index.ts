@@ -36,8 +36,9 @@ async function main() {
   const allNodes: any[] = []
   for (let fi = 0; fi < filePaths.length; fi++) {
     const fp = filePaths[fi]!
-    const md = await Bun.file(join(contentDir, fp)).text()
-    const result = parseMarkdown(md)
+    const fullPath = join(contentDir, fp)
+    const md = await Bun.file(fullPath).text()
+    const result = parseMarkdown(md, fullPath)
     // 多檔案之間插入分頁
     if (allNodes.length > 0) {
       allNodes.push({ type: 'page_break' })

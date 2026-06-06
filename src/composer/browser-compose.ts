@@ -86,6 +86,11 @@
     return Array.from(pageEl.querySelectorAll('[data-column-kind="body"]'));
   }
 
+  // 取得所有圖片欄元素
+  function getPicColumnDefs(pageEl: HTMLElement): HTMLElement[] {
+    return Array.from(pageEl.querySelectorAll('[data-column-kind="pic"]'));
+  }
+
   // 計算某欄位在頁面中的索引
   function getColumnIndex(pageEl: HTMLElement, colEl: HTMLElement): number {
     return Array.from(pageEl.querySelectorAll("[data-column-id]")).indexOf(
@@ -486,6 +491,27 @@
         }
       } else {
         if (node.text) defMap.set(node.id, node.text);
+      }
+      continue;
+    }
+
+    // 圖片：放入圖片欄（data-column-kind="pic"）
+    if (nodeType === "image") {
+      const picCols = getPicColumnDefs(pageEl);
+      if (picCols.length > 0) {
+        const picCol = picCols[0];
+        if (node.src) {
+          const wrapper = document.createElement("div");
+          wrapper.style.cssText = "writing-mode:horizontal-tb;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;";
+          const img = document.createElement("img");
+          img.src = node.src;
+          img.alt = node.alt || "";
+          img.style.cssText = "max-height:100%;max-width:100%;object-fit:contain;";
+          wrapper.appendChild(img);
+          picCol.appendChild(wrapper);
+        }
+        const colIdx = getColumnIndex(pageEl, picCol);
+        pageData.columns[colIdx].nodes.push(node);
       }
       continue;
     }

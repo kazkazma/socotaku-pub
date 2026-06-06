@@ -116,6 +116,22 @@ export class BrowserComposer {
       }
     }
 
+    // 圖片節點的 src 從檔案路徑轉為 base64 data URI
+    const serializedNodes = JSON.parse(JSON.stringify(nodes))
+    for (const node of serializedNodes) {
+      if (node.type === 'image' && node.src && !node.src.startsWith('data:')) {
+        try {
+          const buf = await Bun.file(node.src).arrayBuffer()
+          const ext = node.src.split('.').pop()?.toLowerCase() || 'png'
+          const mime: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' }
+          node.src = `data:${mime[ext] || 'image/png'};base64,${Buffer.from(buf).toString('base64')}`
+        } catch (err) {
+          console.warn(`Failed to load image: ${node.src}`)
+          node.src = ''
+        }
+      }
+    }
+
     const pages = await this.page.evaluate(
       (params) => {
         const fn = (window as any).browserCompose
@@ -125,7 +141,7 @@ export class BrowserComposer {
         return fn(params.nodes, params.initialLayout, params.templates, params.dimensions)
       },
       {
-        nodes: JSON.parse(JSON.stringify(nodes)),
+        nodes: serializedNodes,
         initialLayout,
         templates: this.registry.templates,
         dimensions: this.dimensions,
