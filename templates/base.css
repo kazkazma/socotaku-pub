@@ -87,6 +87,11 @@ html, body {
   text-justify: inter-ideograph;
 }
 
+.column em {
+  font-style: normal;
+  font-weight: bold;
+}
+
 .column .continues {
   text-align-last: justify;
   margin-block-end: 0;

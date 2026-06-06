@@ -120,6 +120,13 @@
       .replace(/\[(\d+)\]/g, (_, id) => renderFnRefHtml(id));
   }
 
+  // 將 *italic* 與 **bold** 轉為 HTML 標籤
+  function applyInlineFormatting(html: string): string {
+    return html
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  }
+
   // 為節點建立對應的 DOM 元素
   function createElementForNode(
     nodeType: string,
@@ -127,15 +134,25 @@
     node?: any,
   ): HTMLElement {
     const el = document.createElement(nodeType === "heading" ? `h${Math.min(node?.level || 2, 6)}` : "p");
-    if (/\[\d+\]/.test(text) && nodeType === "paragraph") {
-      el.innerHTML = replaceFnRefs(text);
-    } else if (text.includes('\n')) {
-      el.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+    const hasFnRefs = /\[\d+\]/.test(text) && (nodeType === "paragraph" || nodeType === "quote");
+    const hasInlineMarkers = text.includes('*');
+    if (hasFnRefs || hasInlineMarkers || text.includes('\n')) {
+      let html: string;
+      if (hasFnRefs) {
+        html = replaceFnRefs(text);
+      } else {
+        html = escapeHtml(text).replace(/\n/g, '<br>');
+      }
+      if (hasInlineMarkers) {
+        html = applyInlineFormatting(html);
+      }
+      el.innerHTML = html;
     } else {
       el.textContent = text;
     }
     if (node?.isEndnote) el.classList.add("endnote-text");
     if (node?.continues) el.classList.add("continues");
+    if (nodeType === "quote") el.classList.add("quote");
 
     return el;
   }
@@ -294,7 +311,7 @@
         const splitNode = {
           ...node,
           text: first,
-          continues: nodeType === "paragraph",
+          continues: nodeType === "paragraph" || nodeType === "quote",
         };
         const splitEl = createElementForNode(nodeType, first, splitNode);
         colEl.appendChild(splitEl);
@@ -428,8 +445,8 @@
       continue;
     }
 
-    // 標題或段落：嘗試放入當前頁面，必要時拆分
-    if (nodeType === "heading" || nodeType === "paragraph") {
+    // 標題、段落或引文：嘗試放入當前頁面，必要時拆分
+    if (nodeType === "heading" || nodeType === "paragraph" || nodeType === "quote") {
       const nextNode = queue[0] ?? null;
 
       let result: { placed: boolean; remainder: string | null };

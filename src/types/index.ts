@@ -44,6 +44,7 @@ export type LayoutDef = {
 export type ContentType =
   | "paragraph"       // 段落
   | "heading"         // 標題
+  | "quote"           // 引文（blockquote）
   | "footnote_ref"    // 註腳引用標記（正文中的 [n]）
   | "footnote_def"    // 註腳定義內容
   | "page_break"      // 分頁指令
@@ -73,6 +74,13 @@ type HeadingNode = BaseNode & {
   type: "heading";
   text: string;   // 標題文字
   level: number;  // 標題層級（1-6）
+};
+
+/** 引文節點：blockquote 內容 */
+type QuoteNode = BaseNode & {
+  type: "quote";
+  text: string;
+  continues?: boolean;
 };
 
 /** 註腳引用：標記正文中的 [n] */
@@ -106,6 +114,7 @@ type LayoutSwitchNode = BaseNode & {
 export type ContentNode =
   | ParagraphNode
   | HeadingNode
+  | QuoteNode
   | FootnoteRefNode
   | FootnoteDefNode
   | PageBreakNode

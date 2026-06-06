@@ -41,6 +41,25 @@ function walkNodes(node: any, nodes: ContentNode[]) {
     return
   }
 
+  // 區塊引用（blockquote）：合併各子段落為單一 quote 節點
+  if (node.type === 'blockquote') {
+    if (node.children) {
+      const texts: string[] = []
+      for (const child of node.children) {
+        if (child.type === 'paragraph' || child.type === 'heading') {
+          const text = extractText(child)
+          if (text.trim()) texts.push(text.trim())
+        } else if (child.children) {
+          walkNodes(child, nodes)
+        }
+      }
+      if (texts.length > 0) {
+        nodes.push({ type: 'quote', text: texts.join('\n') })
+      }
+    }
+    return
+  }
+
   // HTML 註解指令：版面切換 / 分頁 / 分欄
   if (node.type === 'html') {
     if (isDirectiveComment(node.value)) {
@@ -97,6 +116,10 @@ function extractParagraphChildren(node: any, nodes: ContentNode[]) {
     } else if (child.type === 'footnoteReference') {
       textBuffer += `[${child.identifier}]`
       refIds.push(child.identifier)
+    } else if (child.type === 'emphasis') {
+      textBuffer += `*${extractText(child)}*`
+    } else if (child.type === 'strong') {
+      textBuffer += `**${extractText(child)}**`
     } else if (child.type === 'html' && /^<br\s*\/?>$/i.test(child.value)) {
       textBuffer += '\n'
     } else {

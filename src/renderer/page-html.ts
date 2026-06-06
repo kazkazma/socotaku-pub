@@ -94,8 +94,8 @@ function renderColumn(col: any): string {
         const tag = `h${Math.min(node.level || 2, 6)}`
         return `<${tag}>${escapeHtml(node.text || '').replace(/\n/g, '<br>')}</${tag}>`
       }
-      const html = replaceFnMarkers(escapeHtml(node.text || '').replace(/\n/g, '<br>'), isBody)
-      const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : ''].filter(Boolean)
+      const html = applyInlineFormatting(replaceFnMarkers(escapeHtml(node.text || '').replace(/\n/g, '<br>'), isBody))
+      const classes = [node.isEndnote ? 'endnote-text' : '', node.continues ? 'continues' : '', node.type === 'quote' ? 'quote' : ''].filter(Boolean)
       const pCls = classes.length ? ` class="${classes.join(' ')}"` : ''
       return `<p${pCls}>${html}</p>`
     })
@@ -121,6 +121,13 @@ function replaceFnMarkers(text: string, wrapInSpan: boolean): string {
     const svg = `<svg viewBox="0 0 20 20" width="8pt" height="8pt" style="writing-mode:horizontal-tb"><circle cx="10" cy="10" r="9" fill="currentColor"/><text x="10" y="13.5" text-anchor="middle" font-size="11" fill="white">${n}</text></svg>`
     return wrapInSpan ? `<span class="footnote-ref">${svg}</span>` : svg
   })
+}
+
+/** 將 *italic* 與 **bold** 轉為 HTML 標籤 */
+function applyInlineFormatting(html: string): string {
+  return html
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
 }
 
 /** HTML 跳脫（& < > " '） */
