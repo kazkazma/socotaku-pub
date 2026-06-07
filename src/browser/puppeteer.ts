@@ -11,11 +11,14 @@ export async function launchHeadlessBrowser(): Promise<Browser> {
   })
 }
 
+/** mm → px（CSS 標準 96 ppi） */
+const mmToPx = (mm: number): number => Math.ceil(mm * 96 / 25.4)
+
 /** 根據頁面尺寸計算 viewport（頁面尺寸 + buffer，避免 scrollbar 干擾測量） */
 export function getViewport(dimensions: PageDimensions) {
   return {
-    width: Math.ceil(dimensions.widthPt) + VIEWPORT_BUFFER,
-    height: Math.ceil(dimensions.heightPt) + VIEWPORT_BUFFER,
+    width: mmToPx(dimensions.widthMm) + VIEWPORT_BUFFER,
+    height: mmToPx(dimensions.heightMm) + VIEWPORT_BUFFER,
   }
 }
 

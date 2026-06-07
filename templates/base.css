@@ -39,10 +39,11 @@
   --margin-block-end-endnote: 14.4pt;
   --page-width: 182mm;
   --page-height: 257mm;
-  --margin-top: 61pt;
-  --margin-bottom: 61pt;
-  --margin-inner: 79pt;
-  --margin-outer: 61pt;
+  --margin-top: 21.5mm;
+  --margin-bottom: 21.5mm;
+  --margin-inner: 27.9mm;
+  --margin-outer: 21.5mm;
+  --page-number-offset: 32pt;
 }
 
 html, body {
@@ -54,9 +55,25 @@ html, body {
 .page {
   width: var(--page-width);
   height: var(--page-height);
+  padding-top: var(--margin-top);
+  padding-bottom: var(--margin-bottom);
   page-break-after: always;
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap-reverse;
+  gap: 0;
+}
+
+.page.left {
+  padding-left: var(--margin-inner);
+  padding-right: var(--margin-outer);
+}
+
+.page.right {
+  padding-left: var(--margin-outer);
+  padding-right: var(--margin-inner);
 }
 
 .column {
@@ -80,11 +97,35 @@ html, body {
   width: 100%;
 }
 
+.column.pic {
+  writing-mode: horizontal-tb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.column.pic .pic-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.column.pic .pic-image {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .column p {
   margin: 0;
   margin-block-end: var(--margin-block-end-body);
   text-align: justify;
-  text-justify: inter-character;
+  text-justify: inter-ideograph;
 }
 
 .column em {
@@ -148,17 +189,17 @@ html, body {
 
 .page-number {
   position: absolute;
-  bottom: 61pt;
+  bottom: var(--margin-bottom);
   font-size: 9pt;
   writing-mode: horizontal-tb;
 }
 
 .page-number.left {
-  left: 32pt;
+  left: var(--page-number-offset);
   text-align: left;
 }
 
 .page-number.right {
-  right: 32pt;
+  right: var(--page-number-offset);
   text-align: right;
 }

@@ -2,16 +2,14 @@
 // 1. 頁面尺寸與邊距（無外部依賴）
 // ============================================================
 
-/** 頁面尺寸與邊距（同時包含 pt 與 mm 單位） */
+/** 頁面尺寸與邊距（單位：mm，字級 pt 除外） */
 export type PageDimensions = {
-  widthPt: number;
-  heightPt: number;
   widthMm: number;
   heightMm: number;
-  marginTopPt: number;
-  marginBottomPt: number;
-  marginInnerPt: number;
-  marginOuterPt: number;
+  marginTopMm: number;
+  marginBottomMm: number;
+  marginInnerMm: number;
+  marginOuterMm: number;
 };
 
 // ============================================================

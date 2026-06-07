@@ -94,7 +94,7 @@ async function main() {
   }
 
   // ── 輸出 HTML ──
-  const { html: fullHtml } = buildPageHtml(pages, dimensions, registry.combinedCss)
+  const { html: fullHtml } = buildPageHtml(pages, registry.combinedCss)
   const htmlPath = join(outputDir, 'output.html')
   await Bun.write(htmlPath, fullHtml)
   console.log(`HTML written to ${htmlPath}`)
@@ -102,7 +102,7 @@ async function main() {
   // ── 輸出 PDF（自行管理 browser lifecycle） ──
   const outputPath = join(outputDir, 'output.pdf')
   console.log('Rendering PDF...')
-  await renderPdf(fullHtml, outputPath, dimensions, TARGET_DPI / 96)
+  await renderPdf(fullHtml, outputPath, dimensions)
 
   console.log(`Done: ${outputPath}`)
 }

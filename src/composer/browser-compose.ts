@@ -4,16 +4,18 @@
   initialLayout: string,
   templates: Record<string, any>,
   dimensions: {
-    marginOuterPt: number;
-    marginInnerPt: number;
-    marginTopPt: number;
-    marginBottomPt: number;
+    marginOuterMm: number;
+    marginInnerMm: number;
+    marginTopMm: number;
+    marginBottomMm: number;
   },
 ): any[] {
-  const PAGE_LEFT = dimensions.marginOuterPt;
-  const PAGE_RIGHT = dimensions.marginInnerPt;
-  const PAGE_TOP = dimensions.marginTopPt;
-  const PAGE_BOTTOM = dimensions.marginBottomPt;
+  const PAGE_WIDTH = dimensions.widthMm;
+  const PAGE_HEIGHT = dimensions.heightMm;
+  const PAGE_LEFT = dimensions.marginOuterMm;
+  const PAGE_RIGHT = dimensions.marginInnerMm;
+  const PAGE_TOP = dimensions.marginTopMm;
+  const PAGE_BOTTOM = dimensions.marginBottomMm;
 
   const composeArea = document.getElementById("compose-area")!;
   const pages: any[] = [];
@@ -76,7 +78,10 @@
   // 建立頁面 DOM 並填入邊距 padding
   function buildPageDOM(tpl: any, parent: HTMLElement): HTMLElement {
     const pageEl = createElementFromHTML(tpl.pageHtml);
-    pageEl.style.padding = `${PAGE_TOP}pt ${PAGE_RIGHT}pt ${PAGE_BOTTOM}pt ${PAGE_LEFT}pt`;
+    pageEl.classList.add("page");
+    pageEl.style.width = `${PAGE_WIDTH}mm`;
+    pageEl.style.height = `${PAGE_HEIGHT}mm`;
+    pageEl.style.padding = `${PAGE_TOP}mm ${PAGE_RIGHT}mm ${PAGE_BOTTOM}mm ${PAGE_LEFT}mm`;
     parent.appendChild(pageEl);
     return pageEl;
   }
@@ -389,7 +394,19 @@
   // 在已組好的頁面中填入註腳（使用隱藏 measurer 模擬垂直排版來測試空間）
   function placeFootnotes(allPages: any[]): void {
     const measurer = document.createElement("div");
-    measurer.style.cssText = `writing-mode:vertical-rl;font-size:9pt;height:167pt;overflow:hidden;position:absolute;left:-9999px;top:0;width:375pt;`;
+    measurer.style.cssText = "overflow:hidden;position:absolute;left:-9999px;top:0;";
+    // 從 DOM 中第一個腳註欄取得實際尺寸
+    const fnColEl = pageEls[0]?.querySelector('[data-column-kind="footnote"]');
+    if (fnColEl) {
+      const s = getComputedStyle(fnColEl);
+      measurer.style.writingMode = s.writingMode;
+      measurer.style.fontSize = s.fontSize;
+      measurer.style.height = s.height;
+      measurer.style.width = s.width;
+    } else {
+      measurer.style.writingMode = "vertical-rl";
+      measurer.style.fontSize = "9pt";
+    }
     document.body.appendChild(measurer);
 
     const pendingFootnotes: Array<{ displayId: string; text: string }> = [];

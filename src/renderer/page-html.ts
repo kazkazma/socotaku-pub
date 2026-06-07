@@ -1,14 +1,13 @@
-import type { Page, PageDimensions } from '../types'
+import type { Page } from '../types'
 
 /**
  * 將 Pages 陣列渲染為完整的 HTML 字串（可選擇嵌入 CSS）
  */
 export function buildPageHtml(
   pages: Page[],
-  dimensions: PageDimensions,
   cssContent?: string,
 ): { html: string } {
-  const pageDivs = pages.map((page, i) => renderPage(page, i + 1, dimensions))
+  const pageDivs = pages.map((page, i) => renderPage(page, i + 1))
 
   let html = `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -45,43 +44,18 @@ function renderSlots(page: Page): string {
     .join('\n')
 }
 
-/** 將單一 Page 渲染為 HTML 字串，含 page-number 與邊距設定 */
+/** 將單一 Page 渲染為 HTML 字串，含 page-number */
 function renderPage(
   page: Page,
   pageNum: number,
-  dim: PageDimensions,
 ): string {
   const layoutId = page.layoutId
-  // 左頁/右頁交錯邊距（奇數頁＝左頁）
-  const isLeft = pageNum % 2 === 1
-  const marginLeft = isLeft
-    ? dim.marginOuterPt
-    : dim.marginInnerPt
-  const marginRight = isLeft
-    ? dim.marginInnerPt
-    : dim.marginOuterPt
-
-  const pageStyle = [
-    `width:${dim.widthPt}pt`,
-    `height:${dim.heightPt}pt`,
-    `padding:${dim.marginTopPt}pt ${marginRight}pt ${dim.marginBottomPt}pt ${marginLeft}pt`,
-    'page-break-after:always',
-    'overflow:hidden',
-    'position:relative',
-  ].join(';')
-
-  const pageNumStyle = [
-    'position:absolute',
-    'bottom:61pt',
-    'font-size:9pt',
-    isLeft ? 'left:32pt' : 'right:32pt',
-  ].join(';')
-
+  const side = pageNum % 2 === 1 ? 'left' : 'right'
   const bodyHtml = renderSlots(page)
 
-  return `<div class="page ${layoutId}" style="${pageStyle}">
+  return `<div class="page ${layoutId} ${side}">
 ${bodyHtml}
-<span class="page-number" style="${pageNumStyle}">${pageNum}</span>
+<span class="page-number ${side}">${pageNum}</span>
 </div>`
 }
 

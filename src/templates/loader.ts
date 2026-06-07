@@ -18,7 +18,7 @@ async function findLayoutFiles(templateDir: string): Promise<string[]> {
 
 /**
  * 從 base.css 的 :root 變數中解析頁面尺寸與邊距
- * 支援 pt（點數）與 mm（公釐）兩種單位
+ * 全部以 mm 為單位（字級 pt 除外）
  */
 function parseCssDimensions(css: string): PageDimensions {
   const rootMatch = css.match(/:root\s*\{([^}]*)\}/s);
@@ -32,22 +32,21 @@ function parseCssDimensions(css: string): PageDimensions {
     return m[1]!.trim();
   };
 
-  const parsePt = (v: string): number => parseFloat(v.replace(/pt$/, ""));
-  const parseMm = (v: string): number => parseFloat(v.replace(/mm$/, ""));
-  const mmToPt = (mm: number): number => mm * 72 / 25.4;
-
-  const widthMm = parseMm(getVal("page-width"));
-  const heightMm = parseMm(getVal("page-height"));
+  const parseMm = (v: string): number => {
+    v = v.trim();
+    if (v.endsWith("pt")) {
+      return parseFloat(v) * 25.4 / 72;
+    }
+    return parseFloat(v.replace(/mm$/, ""));
+  };
 
   return {
-    widthPt: mmToPt(widthMm),
-    heightPt: mmToPt(heightMm),
-    widthMm,
-    heightMm,
-    marginTopPt: parsePt(getVal("margin-top")),
-    marginBottomPt: parsePt(getVal("margin-bottom")),
-    marginInnerPt: parsePt(getVal("margin-inner")),
-    marginOuterPt: parsePt(getVal("margin-outer")),
+    widthMm: parseMm(getVal("page-width")),
+    heightMm: parseMm(getVal("page-height")),
+    marginTopMm: parseMm(getVal("margin-top")),
+    marginBottomMm: parseMm(getVal("margin-bottom")),
+    marginInnerMm: parseMm(getVal("margin-inner")),
+    marginOuterMm: parseMm(getVal("margin-outer")),
   };
 }
 
